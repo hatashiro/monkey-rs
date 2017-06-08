@@ -1,0 +1,6 @@
+[package]
+name = "monkey-rs"
+version = "0.1.0"
+authors = ["Hyunje Jun <me@noraesae.net>"]
+
+[dependencies]
