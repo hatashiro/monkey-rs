@@ -1,9 +1,6 @@
 [package]
-name = "monkey"
+name = "core"
 version = "0.1.0"
 authors = ["Hyunje Jun <me@noraesae.net>"]
 
-[workspace]
-
 [dependencies]
-core = { path = "core" }
