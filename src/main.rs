@@ -1,7 +1,7 @@
 extern crate monkey;
 
-use monkey::hello;
+use monkey::repl;
 
 fn main() {
-    println!("{}", hello());
+    println!("{}", repl::hello());
 }
