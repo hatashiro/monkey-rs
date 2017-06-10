@@ -8,3 +8,4 @@ authors = ["Hyunje Jun <me@noraesae.net>"]
 [dependencies]
 core = { path = "core" }
 getopts = "0.2"
+rustyline = "1.0"
