@@ -15,6 +15,7 @@ pub fn main() {
                     Ok(output) => println!("{}", output),
                     Err(ReplError::DoNothing) => continue,
                     Err(ReplError::Exit) => break,
+                    Err(ReplError::LexError(err)) => println!("Lexical error: {:?}", err),
                 }
             }
             Err(ReadlineError::Interrupted) => continue,
@@ -30,6 +31,7 @@ type Result<T> = result::Result<T, ReplError>;
 enum ReplError {
     Exit,
     DoNothing,
+    LexError(lexer::LexError),
 }
 
 fn handle_input(input: String) -> Result<String> {
@@ -39,7 +41,7 @@ fn handle_input(input: String) -> Result<String> {
         return Err(ReplError::Exit);
     }
 
-    let tokens = lexer::tokenize(input.chars());
+    let tokens = try!(lexer::tokenize(input.chars()).map_err(|err| ReplError::LexError(err)));
 
     Ok(format!("{:?}", tokens))
 }

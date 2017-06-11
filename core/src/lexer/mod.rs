@@ -1,11 +1,15 @@
-pub struct Token {}
+use std::result;
+
+pub type Result<T> = result::Result<T, LexError>;
 
 #[derive(Debug)]
-pub struct Tokens {}
+pub enum Token {
+    Char(char),
+}
 
-pub fn tokenize<S: Iterator<Item = char>>(input: S) -> Tokens {
-    for c in input {
-        println!("{}", c);
-    }
-    Tokens {}
+#[derive(Debug)]
+pub struct LexError {}
+
+pub fn tokenize<T: Iterator<Item = char>>(input: T) -> Result<Vec<Token>> {
+    Ok(input.map(|c| Token::Char(c)).collect())
 }
