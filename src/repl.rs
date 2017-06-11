@@ -1,3 +1,4 @@
+use core::lexer;
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use std::result;
@@ -38,6 +39,7 @@ fn handle_input(input: String) -> Result<String> {
         return Err(ReplError::Exit);
     }
 
-    // FIXME
-    Ok(input)
+    let tokens = lexer::tokenize(input.chars());
+
+    Ok(format!("{:?}", tokens))
 }
