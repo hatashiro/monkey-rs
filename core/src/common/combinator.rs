@@ -24,8 +24,8 @@ mod tests {
     }
 
     impl TP {
-        fn new(input: Vec<i32>) -> TP {
-            TP { input: VecDeque::from(input) }
+        fn new(input: &[i32]) -> TP {
+            TP { input: VecDeque::from(input.to_vec()) }
         }
     }
 
@@ -72,14 +72,14 @@ mod tests {
     }
 
     with_res!(test next_success, {
-        let mut p = TP::new(vec![1, 2, 3]);
+        let mut p = TP::new(&[1, 2, 3]);
         assert_eq!(next!(p), 1);
         assert_eq!(next!(p), 2);
         assert_eq!(next!(p), 3);
     });
 
     with_res!(panic "unexpected eof", next_fail_empty, {
-        let mut p = TP::new(vec![]);
+        let mut p = TP::new(&[]);
         assert_eq!(next!(p), 1);
     });
 }
