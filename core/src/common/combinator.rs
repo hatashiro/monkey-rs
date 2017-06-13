@@ -1,13 +1,13 @@
 trait Parser<T, E> {
-    fn next(&self) -> Option<&T>;
+    fn next(&mut self) -> Option<T>;
     fn preview(&self) -> Option<&T>;
     fn current_pos(&self) -> (i32, i32);
     fn error(&self, message: &str) -> E;
 }
 
-macro_rules! preview {
+macro_rules! next {
     ($p:expr) => {
-        match $p.preview() {
+        match $p.next() {
             Some(x) => x,
             None => return Err($p.error("unexpected eof")),
         }
@@ -17,24 +17,25 @@ macro_rules! preview {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::vec_deque::VecDeque;
 
-    struct TP<'a> {
-        input: &'a mut [i32],
+    struct TP {
+        input: VecDeque<i32>,
     }
 
-    impl<'a> TP<'a> {
-        fn new(input: &mut [i32]) -> TP {
-            TP { input }
+    impl TP {
+        fn new(input: Vec<i32>) -> TP {
+            TP { input: VecDeque::from(input) }
         }
     }
 
-    impl<'a> Parser<i32, String> for TP<'a> {
-        fn next(&self) -> Option<&i32> {
-            self.input.iter().next()
+    impl Parser<i32, String> for TP {
+        fn next(&mut self) -> Option<i32> {
+            self.input.pop_front()
         }
 
         fn preview(&self) -> Option<&i32> {
-            self.input.iter().nth(0)
+            self.input.front()
         }
 
         fn current_pos(&self) -> (i32, i32) {
@@ -70,15 +71,15 @@ mod tests {
         };
     }
 
-    with_res!(test preview_success, {
-        let input = &mut [1, 2, 3];
-        let p = TP::new(input);
-        assert_eq!(*preview!(p), 1);
+    with_res!(test next_success, {
+        let mut p = TP::new(vec![1, 2, 3]);
+        assert_eq!(next!(p), 1);
+        assert_eq!(next!(p), 2);
+        assert_eq!(next!(p), 3);
     });
 
-    with_res!(panic "unexpected eof", preview_fail_empty, {
-        let input = &mut [];
-        let p = TP::new(input);
-        assert_eq!(*preview!(p), 1);
+    with_res!(panic "unexpected eof", next_fail_empty, {
+        let mut p = TP::new(vec![]);
+        assert_eq!(next!(p), 1);
     });
 }
