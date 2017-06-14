@@ -20,7 +20,7 @@ macro_rules! predicate {
         if $pred(x) {
             x
         } else {
-            return Err($p.error(format!("unexpected token '{}'", x)));
+            return Err($p.error(format!("unexpected token {}", x)));
         }
     }}
 }
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(predicate!(p, |x| x % 2 == 0), 2);
     });
 
-    with_res!(panic "unexpected token '3'", predicate_fail_not_satisfy, {
+    with_res!(panic "unexpected token 3", predicate_fail_not_satisfy, {
         let mut p = TP::new(&[3, 5, 7]);
         assert_eq!(predicate!(p, |x| x % 2 == 0), 3);
     });
