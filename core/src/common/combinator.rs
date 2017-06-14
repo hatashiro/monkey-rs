@@ -2,7 +2,7 @@ trait Parser<T, E> {
     fn next(&mut self) -> Option<T>;
     fn preview(&self) -> Option<&T>;
     fn current_pos(&self) -> (i32, i32);
-    fn error(&self, message: &str) -> E;
+    fn error<S: Into<String>>(&self, message: S) -> E;
 }
 
 macro_rules! next {
@@ -53,8 +53,8 @@ mod tests {
             (0, 0)
         }
 
-        fn error(&self, message: &str) -> String {
-            message.to_string()
+        fn error<S: Into<String>>(&self, message: S) -> String {
+            message.into()
         }
     }
 
