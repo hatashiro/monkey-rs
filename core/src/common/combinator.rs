@@ -25,6 +25,19 @@ macro_rules! predicate {
     }}
 }
 
+macro_rules! atom {
+    ($p:expr, $expected:expr) => {{
+        let x = next!($p);
+        if x == $expected {
+            x
+        } else {
+            return Err(
+                $p.error(format!("unexpected token {}, expected {}", x, $expected))
+            );
+        }
+    }}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,5 +122,23 @@ mod tests {
     with_res!(panic "unexpected token 3", predicate_fail_not_satisfy, {
         let mut p = TP::new(&[3, 5, 7]);
         assert_eq!(predicate!(p, |x| x % 2 == 0), 3);
+    });
+
+    with_res!(test atom_success, {
+        let mut p = TP::new(&[2, 4, 6]);
+        assert_eq!(atom!(p, 2), 2);
+        assert_eq!(atom!(p, 4), 4);
+        assert_eq!(atom!(p, 6), 6);
+    });
+
+    with_res!(panic "unexpected eof", atom_fail_empty, {
+        let mut p = TP::new(&[]);
+        assert_eq!(atom!(p, 2), 2);
+    });
+
+    with_res!(panic "unexpected token 5, expected 4", atom_fail_not_expected, {
+        let mut p = TP::new(&[3, 5, 7]);
+        assert_eq!(atom!(p, 3), 3);
+        assert_eq!(atom!(p, 4), 4);
     });
 }
