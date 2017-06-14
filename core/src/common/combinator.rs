@@ -38,10 +38,21 @@ macro_rules! atom {
     }}
 }
 
+macro_rules! string {
+    ($p:expr, $iter:expr, $t:ident) => {{
+        let i = $iter;
+        for c in &i {
+            atom!($p, *c);
+        }
+        $t::from_iter(i)
+    }}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::vec_deque::VecDeque;
+    use std::iter::FromIterator;
 
     struct TP {
         input: VecDeque<i32>,
@@ -140,5 +151,20 @@ mod tests {
         let mut p = TP::new(&[3, 5, 7]);
         assert_eq!(atom!(p, 3), 3);
         assert_eq!(atom!(p, 4), 4);
+    });
+
+    with_res!(test string_success, {
+        let mut p = TP::new(&[2, 4, 6]);
+        assert_eq!(string!(p, vec![2, 4, 6], Vec), vec![2, 4, 6]);
+    });
+
+    with_res!(panic "unexpected eof", string_fail_empty, {
+        let mut p = TP::new(&[]);
+        assert_eq!(string!(p, vec![2, 4, 6], Vec), [2, 4, 6]);
+    });
+
+    with_res!(panic "unexpected token 5, expected 4", string_fail_not_expected, {
+        let mut p = TP::new(&[2, 5, 6]);
+        assert_eq!(string!(p, vec![2, 4, 6], Vec), vec![2, 4, 6]);
     });
 }
