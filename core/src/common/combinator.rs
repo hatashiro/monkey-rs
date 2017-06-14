@@ -14,6 +14,17 @@ macro_rules! next {
     }
 }
 
+macro_rules! predicate {
+    ($p:expr, $pred:expr) => {{
+        let x = next!($p);
+        if $pred(x) {
+            x
+        } else {
+            return Err($p.error(format!("unexpected token '{}'", x)));
+        }
+    }}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,5 +92,22 @@ mod tests {
     with_res!(panic "unexpected eof", next_fail_empty, {
         let mut p = TP::new(&[]);
         assert_eq!(next!(p), 1);
+    });
+
+    with_res!(test predicate_success, {
+        let mut p = TP::new(&[2, 4, 6]);
+        assert_eq!(predicate!(p, |x| x % 2 == 0), 2);
+        assert_eq!(predicate!(p, |x| x % 2 == 0), 4);
+        assert_eq!(predicate!(p, |x| x % 2 == 0), 6);
+    });
+
+    with_res!(panic "unexpected eof", predicate_fail_empty, {
+        let mut p = TP::new(&[]);
+        assert_eq!(predicate!(p, |x| x % 2 == 0), 2);
+    });
+
+    with_res!(panic "unexpected token '3'", predicate_fail_not_satisfy, {
+        let mut p = TP::new(&[3, 5, 7]);
+        assert_eq!(predicate!(p, |x| x % 2 == 0), 3);
     });
 }
