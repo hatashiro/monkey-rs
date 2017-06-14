@@ -1,4 +1,4 @@
-# monkey-rs
+# monkey-rs [![Build Status](https://travis-ci.org/noraesae/monkey-rs.svg?branch=master)](https://travis-ci.org/noraesae/monkey-rs)
 
 A compiler for the Monkey programming language written in Rust
 
