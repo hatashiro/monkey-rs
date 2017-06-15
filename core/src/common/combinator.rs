@@ -80,6 +80,8 @@ mod tests {
         }
     }
 
+    type TPR = Result<Vec<i32>, String>;
+
     fn err<T>(m: &str) -> Result<T, String> {
         Err(String::from(m))
     }
@@ -148,14 +150,13 @@ mod tests {
     #[test]
     fn string_fail_empty() {
         let mut p = TP::new(&[]);
-        assert_eq!(p.string(vec![2, 4, 6]) as Result<Vec<i32>, String>,
-                   err("unexpected eof"));
+        assert_eq!(p.string(vec![2, 4, 6]) as TPR, err("unexpected eof"));
     }
 
     #[test]
     fn string_fail_not_expected() {
         let mut p = TP::new(&[2, 5, 6]);
-        assert_eq!(p.string(vec![2, 4, 6]) as Result<Vec<i32>, String>,
+        assert_eq!(p.string(vec![2, 4, 6]) as TPR,
                    err("unexpected token 5, expected 4"));
     }
 }
