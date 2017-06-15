@@ -47,6 +47,12 @@ trait Parser<T: Display + Eq, E> {
     }
 }
 
+macro_rules! attemp {
+    ($parser:ident.$method:ident($($arg:expr),*)) => {
+        $parser.$method($($arg),*)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,4 +165,18 @@ mod tests {
         assert_eq!(p.string(vec![2, 4, 6]) as TPR,
                    err("unexpected token 5, expected 4"));
     }
+
+    #[test]
+    fn attemp_success() {
+        let mut p = TP::new(&[2, 4, 6]);
+        assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
+    }
+
+    // #[test]
+    // fn attemp_fail_recover() {
+    //     let mut p = TP::new(&[2, 4, 6]);
+    //     assert_eq!(attemp!(p.string(vec![2, 4, 7])) as TPR,
+    //                err("unexpected token 6, expected 7"));
+    //     assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
+    // }
 }
