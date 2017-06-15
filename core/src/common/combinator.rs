@@ -15,21 +15,21 @@ trait Parser<T: Display + Eq, E> {
     fn predicate<F>(&mut self, pred: F) -> Result<T, E>
         where F: Fn(&T) -> bool
     {
-        self.next()
-            .and_then(|x| if pred(&x) {
-                          Ok(x)
-                      } else {
-                          Err(self.error(format!("unexpected token {}", x)))
-                      })
+        let x = try!(self.next());
+        if pred(&x) {
+            Ok(x)
+        } else {
+            Err(self.error(format!("unexpected token {}", x)))
+        }
     }
 
     fn atom(&mut self, expected: T) -> Result<T, E> {
-        self.next()
-            .and_then(|x| if x == expected {
-                          Ok(x)
-                      } else {
-                          Err(self.error(format!("unexpected token {}, expected {}", x, expected)))
-                      })
+        let x = try!(self.next());
+        if x == expected {
+            Ok(x)
+        } else {
+            Err(self.error(format!("unexpected token {}, expected {}", x, expected)))
+        }
     }
 
     fn string<S, O>(&mut self, s: S) -> Result<O, E>
