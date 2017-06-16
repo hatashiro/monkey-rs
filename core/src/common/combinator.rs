@@ -8,6 +8,10 @@ trait Parser<T: Display + Eq, E> {
     fn current_pos(&self) -> (i32, i32);
     fn error<S: Into<String>>(&self, message: S) -> E;
 
+    // for state rewind with attemp! macro
+    fn record(&mut self);
+    fn rewind(&mut self);
+
     fn next(&mut self) -> Result<T, E> {
         self.consume().ok_or(self.error("unexpected eof"))
     }
@@ -48,9 +52,13 @@ trait Parser<T: Display + Eq, E> {
 }
 
 macro_rules! attemp {
-    ($parser:ident.$method:ident($($arg:expr),*)) => {
-        $parser.$method($($arg),*)
-    }
+    ($parser:ident.$method:ident($($arg:expr),*)) => {{
+        $parser.record();
+        $parser.$method($($arg),*).map_err(|x| {
+            $parser.rewind();
+            x
+        })
+    }}
 }
 
 #[cfg(test)]
@@ -60,17 +68,30 @@ mod tests {
 
     struct TP {
         input: VecDeque<i32>,
+        recorded: Vec<i32>,
+        recording: bool,
     }
 
     impl TP {
         fn new(input: &[i32]) -> TP {
-            TP { input: VecDeque::from(input.to_vec()) }
+            TP {
+                input: VecDeque::from(input.to_vec()),
+                recorded: vec![],
+                recording: false,
+            }
         }
     }
 
     impl Parser<i32, String> for TP {
         fn consume(&mut self) -> Option<i32> {
-            self.input.pop_front()
+            self.input
+                .pop_front()
+                .map(|c| {
+                         if self.recording {
+                             self.recorded.push(c);
+                         }
+                         c
+                     })
         }
 
         fn preview(&self) -> Option<&i32> {
@@ -83,6 +104,19 @@ mod tests {
 
         fn error<S: Into<String>>(&self, message: S) -> String {
             message.into()
+        }
+
+        fn record(&mut self) {
+            self.recording = true;
+            self.recorded.clear();
+        }
+
+        fn rewind(&mut self) {
+            self.recording = false;
+
+            while let Some(c) = self.recorded.pop() {
+                self.input.push_front(c)
+            }
         }
     }
 
@@ -172,11 +206,11 @@ mod tests {
         assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
     }
 
-    // #[test]
-    // fn attemp_fail_recover() {
-    //     let mut p = TP::new(&[2, 4, 6]);
-    //     assert_eq!(attemp!(p.string(vec![2, 4, 7])) as TPR,
-    //                err("unexpected token 6, expected 7"));
-    //     assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
-    // }
+    #[test]
+    fn attemp_fail_recover() {
+        let mut p = TP::new(&[2, 4, 6]);
+        assert_eq!(attemp!(p.string(vec![2, 4, 7])) as TPR,
+                   err("unexpected token 6, expected 7"));
+        assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
+    }
 }
