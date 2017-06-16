@@ -58,6 +58,22 @@ trait Parser<T: Display + Eq, E>: Sized {
                                  x
                              })
     }
+
+    fn choose<O, F>(&mut self, parsers: &[F]) -> Result<O, E>
+        where F: Fn(&mut Self) -> Result<O, E>
+    {
+        for parser in parsers {
+            match self.try(|p| parser(p)) {
+                Ok(x) => return Ok(x),
+                Err(_) => continue,
+            }
+        }
+
+        Err(self.error(match self.preview() {
+                           Some(x) => format!("unexpected token {}", x),
+                           None => String::from("unexpected eof"),
+                       }))
+    }
 }
 
 #[cfg(test)]
@@ -193,5 +209,41 @@ mod tests {
         assert_eq!(p.try(|p| p.string(vec![2, 4, 7])) as TPR,
                    err("unexpected token 6, expected 7"));
         assert_eq!(p.try(|p| p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
+    }
+
+    #[test]
+    fn choose_success() {
+        let mut p = TP::new(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
+                              |p| p.string(vec![4, 5, 6, 7]),
+                              |p| p.string(vec![4, 5, 6])]),
+                   Ok(vec![1, 2, 3]));
+    }
+
+    #[test]
+    fn choose_success_with_recover() {
+        let mut p = TP::new(&[4, 5, 6, 7, 8, 9, 10]);
+        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
+                              |p| p.string(vec![4, 5, 6, 8]),
+                              |p| p.string(vec![4, 5, 6])]),
+                   Ok(vec![4, 5, 6]));
+    }
+
+    #[test]
+    fn fail_choose_no_match() {
+        let mut p = TP::new(&[5, 6, 7, 8, 9, 10]);
+        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
+                              |p| p.string(vec![4, 5, 6, 8]),
+                              |p| p.string(vec![4, 5, 6])]),
+                   err("unexpected token 5"));
+    }
+
+    #[test]
+    fn fail_choose_empty() {
+        let mut p = TP::new(&[]);
+        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
+                              |p| p.string(vec![4, 5, 6, 8]),
+                              |p| p.string(vec![4, 5, 6])]),
+                   err("unexpected eof"));
     }
 }
