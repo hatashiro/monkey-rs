@@ -49,16 +49,16 @@ trait Parser<T: Display + Eq, E> {
         }
         Ok(O::from_iter(res))
     }
-}
 
-macro_rules! attemp {
-    ($parser:ident.$method:ident($($arg:expr),*)) => {{
-        $parser.record();
-        $parser.$method($($arg),*).map_err(|x| {
-            $parser.rewind();
-            x
-        })
-    }}
+    fn try<O, F>(&mut self, parser: F) -> Result<O, E>
+        where F: Fn(&mut Self) -> Result<O, E>
+    {
+        self.record();
+        parser(self).map_err(|x| {
+                                 self.rewind();
+                                 x
+                             })
+    }
 }
 
 #[cfg(test)]
@@ -201,16 +201,16 @@ mod tests {
     }
 
     #[test]
-    fn attemp_success() {
+    fn try_success() {
         let mut p = TP::new(&[2, 4, 6]);
-        assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
+        assert_eq!(p.try(|p| p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
     }
 
     #[test]
-    fn attemp_fail_recover() {
+    fn try_fail_recover() {
         let mut p = TP::new(&[2, 4, 6]);
-        assert_eq!(attemp!(p.string(vec![2, 4, 7])) as TPR,
+        assert_eq!(p.try(|p| p.string(vec![2, 4, 7])) as TPR,
                    err("unexpected token 6, expected 7"));
-        assert_eq!(attemp!(p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
+        assert_eq!(p.try(|p| p.string(vec![2, 4, 6])), Ok(vec![2, 4, 6]));
     }
 }
