@@ -2,15 +2,14 @@ use std::cmp::Eq;
 use std::fmt::Display;
 use std::iter::FromIterator;
 
-trait Parser<T: Display + Eq, E> {
+trait Parser<T: Display + Eq, E>: Sized {
     fn preview(&self) -> Option<&T>;
     fn consume(&mut self) -> Option<T>;
     fn current_pos(&self) -> (i32, i32);
     fn error<S: Into<String>>(&self, message: S) -> E;
 
-    // for state rewind with attemp! macro
-    fn record(&mut self);
-    fn rewind(&mut self);
+    fn export(&self) -> Self;
+    fn import(&mut self, backup: Self);
 
     fn next(&mut self) -> Result<T, E> {
         self.consume().ok_or(self.error("unexpected eof"))
@@ -53,9 +52,9 @@ trait Parser<T: Display + Eq, E> {
     fn try<O, F>(&mut self, parser: F) -> Result<O, E>
         where F: Fn(&mut Self) -> Result<O, E>
     {
-        self.record();
+        let backup = self.export();
         parser(self).map_err(|x| {
-                                 self.rewind();
+                                 self.import(backup);
                                  x
                              })
     }
@@ -68,30 +67,17 @@ mod tests {
 
     struct TP {
         input: VecDeque<i32>,
-        recorded: Vec<i32>,
-        recording: bool,
     }
 
     impl TP {
         fn new(input: &[i32]) -> TP {
-            TP {
-                input: VecDeque::from(input.to_vec()),
-                recorded: vec![],
-                recording: false,
-            }
+            TP { input: VecDeque::from(input.to_vec()) }
         }
     }
 
     impl Parser<i32, String> for TP {
         fn consume(&mut self) -> Option<i32> {
-            self.input
-                .pop_front()
-                .map(|c| {
-                         if self.recording {
-                             self.recorded.push(c);
-                         }
-                         c
-                     })
+            self.input.pop_front()
         }
 
         fn preview(&self) -> Option<&i32> {
@@ -106,17 +92,12 @@ mod tests {
             message.into()
         }
 
-        fn record(&mut self) {
-            self.recording = true;
-            self.recorded.clear();
+        fn export(&self) -> Self {
+            TP { input: self.input.clone() }
         }
 
-        fn rewind(&mut self) {
-            self.recording = false;
-
-            while let Some(c) = self.recorded.pop() {
-                self.input.push_front(c)
-            }
+        fn import(&mut self, backup: Self) {
+            self.input = backup.input;
         }
     }
 
