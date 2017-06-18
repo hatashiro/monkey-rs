@@ -61,7 +61,7 @@ trait Parser<T: Display + Eq, E>: Sized {
 
     fn choose<O>(&mut self, parsers: &[&Fn(&mut Self) -> Result<O, E>]) -> Result<O, E> {
         for parser in parsers {
-            match self.try(|p| parser(p)) {
+            match self.try(parser) {
                 Ok(x) => return Ok(x),
                 Err(_) => continue,
             }
