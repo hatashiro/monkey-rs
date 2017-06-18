@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn fail_choose_no_match() {
+    fn choose_fail_no_match() {
         let mut p = TP::new(&[5, 6, 7, 8, 9, 10]);
         assert_eq!(p.choose(&[&|p| p.string(vec![1, 2, 3]),
                               &|p| p.string(vec![4, 5, 6, 8]),
@@ -237,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn fail_choose_empty() {
+    fn choose_fail_empty() {
         let mut p = TP::new(&[]);
         assert_eq!(p.choose(&[&|p| p.string(vec![1, 2, 3]),
                               &|p| p.string(vec![4, 5, 6, 8]),
