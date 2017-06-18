@@ -77,7 +77,14 @@ trait Parser<T: Display + Eq, E>: Sized {
         where F: Fn(&mut Self) -> Result<X, E>,
               O: FromIterator<X>
     {
-        unimplemented!()
+        let mut res: Vec<X> = Vec::new();
+        loop {
+            match self.try(&parser) {
+                Ok(x) => res.push(x),
+                Err(_) => break,
+            }
+        }
+        Ok(O::from_iter(res))
     }
 }
 
