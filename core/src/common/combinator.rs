@@ -86,6 +86,13 @@ trait Parser<T: Display + Eq, E>: Sized {
         }
         Ok(O::from_iter(res))
     }
+
+    fn many1<X, F, O>(&mut self, parser: F) -> Result<O, E>
+        where F: Fn(&mut Self) -> Result<X, E>,
+              O: FromIterator<X>
+    {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]
@@ -268,5 +275,23 @@ mod tests {
                    Ok(vec![1, 2, 3, 4]));
         assert_eq!(TP::new(&[4, 5, 6, 7, 8]).many(&lt5), Ok(vec![4]));
         assert_eq!(TP::new(&[5, 6, 7, 8]).many(&lt5), Ok(vec![]));
+    }
+
+    #[test]
+    fn many1_success() {
+        let lt5 = |p: &mut TP| -> Result<i32, String> { p.predicate(|x| *x < 5) };
+
+        assert_eq!(TP::new(&[1, 2, 3, 4]).many1(&lt5), Ok(vec![1, 2, 3, 4]));
+        assert_eq!(TP::new(&[1, 2, 3, 4, 5, 6, 7, 8]).many1(&lt5),
+                   Ok(vec![1, 2, 3, 4]));
+        assert_eq!(TP::new(&[4, 5, 6, 7, 8]).many1(&lt5), Ok(vec![4]));
+    }
+
+    #[test]
+    fn many1_fail() {
+        let lt5 = |p: &mut TP| -> Result<i32, String> { p.predicate(|x| *x < 5) };
+
+        assert_eq!(TP::new(&[5, 6, 7, 8]).many1(&lt5) as TPR,
+                   err("unexpected token 5"));
     }
 }
