@@ -59,9 +59,7 @@ trait Parser<T: Display + Eq, E>: Sized {
                              })
     }
 
-    fn choose<O, F>(&mut self, parsers: &[F]) -> Result<O, E>
-        where F: Fn(&mut Self) -> Result<O, E>
-    {
+    fn choose<O>(&mut self, parsers: &[&Fn(&mut Self) -> Result<O, E>]) -> Result<O, E> {
         for parser in parsers {
             match self.try(|p| parser(p)) {
                 Ok(x) => return Ok(x),
@@ -214,36 +212,36 @@ mod tests {
     #[test]
     fn choose_success() {
         let mut p = TP::new(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
-                              |p| p.string(vec![4, 5, 6, 7]),
-                              |p| p.string(vec![4, 5, 6])]),
+        assert_eq!(p.choose(&[&|p| p.string(vec![1, 2, 3]),
+                              &|p| p.string(vec![4, 5, 6, 7]),
+                              &|p| p.string(vec![4, 5, 6])]),
                    Ok(vec![1, 2, 3]));
     }
 
     #[test]
     fn choose_success_with_recover() {
         let mut p = TP::new(&[4, 5, 6, 7, 8, 9, 10]);
-        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
-                              |p| p.string(vec![4, 5, 6, 8]),
-                              |p| p.string(vec![4, 5, 6])]),
+        assert_eq!(p.choose(&[&|p| p.string(vec![1, 2, 3]),
+                              &|p| p.string(vec![4, 5, 6, 8]),
+                              &|p| p.string(vec![4, 5, 6])]),
                    Ok(vec![4, 5, 6]));
     }
 
     #[test]
     fn fail_choose_no_match() {
         let mut p = TP::new(&[5, 6, 7, 8, 9, 10]);
-        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
-                              |p| p.string(vec![4, 5, 6, 8]),
-                              |p| p.string(vec![4, 5, 6])]),
+        assert_eq!(p.choose(&[&|p| p.string(vec![1, 2, 3]),
+                              &|p| p.string(vec![4, 5, 6, 8]),
+                              &|p| p.string(vec![4, 5, 6])]) as TPR,
                    err("unexpected token 5"));
     }
 
     #[test]
     fn fail_choose_empty() {
         let mut p = TP::new(&[]);
-        assert_eq!(p.choose(&[|p| p.string(vec![1, 2, 3]),
-                              |p| p.string(vec![4, 5, 6, 8]),
-                              |p| p.string(vec![4, 5, 6])]),
+        assert_eq!(p.choose(&[&|p| p.string(vec![1, 2, 3]),
+                              &|p| p.string(vec![4, 5, 6, 8]),
+                              &|p| p.string(vec![4, 5, 6])]) as TPR,
                    err("unexpected eof"));
     }
 }
