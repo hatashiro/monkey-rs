@@ -101,6 +101,12 @@ trait Parser<T: Display + Eq, E>: Sized {
         }
         Ok(O::from_iter(res))
     }
+
+    fn optional<X, F>(&mut self, parser: F)
+        where F: Fn(&mut Self) -> Result<X, E>
+    {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]
@@ -301,5 +307,19 @@ mod tests {
 
         assert_eq!(TP::new(&[5, 6, 7, 8]).many1(&lt5) as TPR,
                    err("unexpected token 5"));
+    }
+
+    #[test]
+    fn optional_success() {
+        let mut p = TP::new(&[1, 2, 3, 4, 5]);
+        p.optional(|p| p.atom(1));
+        assert_eq!(p.string(vec![2, 3, 4]), Ok(vec![2, 3, 4]));
+    }
+
+    #[test]
+    fn optional_success_without_matching() {
+        let mut p = TP::new(&[1, 2, 3, 4, 5]);
+        p.optional(|p| p.atom(2));
+        assert_eq!(p.string(vec![1, 2, 3]), Ok(vec![1, 2, 3]));
     }
 }
