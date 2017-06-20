@@ -105,7 +105,7 @@ trait Parser<T: Display + Eq, E>: Sized {
     fn optional<X, F>(&mut self, parser: F)
         where F: Fn(&mut Self) -> Result<X, E>
     {
-        self.try(parser);
+        let _ = self.try(parser);
     }
 }
 
