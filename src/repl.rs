@@ -1,4 +1,5 @@
 use core::lexer;
+use core::lexer::types::*;
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use std::result;
@@ -31,7 +32,7 @@ type Result<T> = result::Result<T, ReplError>;
 enum ReplError {
     Exit,
     DoNothing,
-    LexError(lexer::LexError),
+    LexError(LexError),
 }
 
 fn handle_input(input: String) -> Result<String> {
