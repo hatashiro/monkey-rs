@@ -8,8 +8,8 @@ trait Parser<T: Display + Eq, E>: Sized {
     fn current_pos(&self) -> (i32, i32);
     fn error<S: Into<String>>(&self, message: S) -> E;
 
-    fn export(&self) -> Self;
-    fn import(&mut self, backup: Self);
+    fn save(&mut self);
+    fn load(&mut self);
 
     fn next(&mut self) -> Result<T, E> {
         self.consume().ok_or(self.error("unexpected eof"))
@@ -52,9 +52,9 @@ trait Parser<T: Display + Eq, E>: Sized {
     fn try<O, F>(&mut self, parser: F) -> Result<O, E>
         where F: Fn(&mut Self) -> Result<O, E>
     {
-        let backup = self.export();
+        self.save();
         parser(self).map_err(|x| {
-                                 self.import(backup);
+                                 self.load();
                                  x
                              })
     }
@@ -112,25 +112,36 @@ trait Parser<T: Display + Eq, E>: Sized {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::vec_deque::VecDeque;
 
     struct TP {
-        input: VecDeque<i32>,
+        input: Vec<i32>,
+        cursor: usize,
+        saved_cursor: usize,
     }
 
     impl TP {
         fn new(input: &[i32]) -> TP {
-            TP { input: VecDeque::from(input.to_vec()) }
+            TP {
+                input: input.to_vec(),
+                cursor: 0,
+                saved_cursor: 0,
+            }
         }
     }
 
     impl Parser<i32, String> for TP {
         fn consume(&mut self) -> Option<i32> {
-            self.input.pop_front()
+            match self.input.get(self.cursor) {
+                Some(x) => {
+                    self.cursor += 1;
+                    Some(x.clone())
+                }
+                None => None,
+            }
         }
 
         fn preview(&self) -> Option<&i32> {
-            self.input.front()
+            self.input.get(self.cursor)
         }
 
         fn current_pos(&self) -> (i32, i32) {
@@ -141,12 +152,12 @@ mod tests {
             message.into()
         }
 
-        fn export(&self) -> Self {
-            TP { input: self.input.clone() }
+        fn save(&mut self) {
+            self.saved_cursor = self.cursor;
         }
 
-        fn import(&mut self, backup: Self) {
-            self.input = backup.input;
+        fn load(&mut self) {
+            self.cursor = self.saved_cursor;
         }
     }
 
