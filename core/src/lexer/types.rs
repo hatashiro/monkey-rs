@@ -9,9 +9,34 @@ macro_rules! token_defs {
         #[derive(Debug)]
         pub enum $enum_name {
             $(
-                $name { row: i32, col: i32, literal: String },
+                $name(i32, i32, String),
             )*
         }
+
+        impl $enum_name {
+            pub fn pos(&self) -> (i32, i32) {
+                match *self {
+                    $(
+                        $enum_name::$name(row, col, _) => (row, col),
+                    )*
+                }
+            }
+
+            pub fn literal(&self) -> &String {
+                match *self {
+                    $(
+                        $enum_name::$name(_, _, ref lit) => lit,
+                    )*
+                }
+            }
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! token {
+    ($token:ident, $row:expr, $col:expr, $literal:expr) => {
+        Token::$token($row, $col, $literal.to_string())
     }
 }
 
