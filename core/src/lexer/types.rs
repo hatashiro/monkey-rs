@@ -118,7 +118,7 @@ impl Parser<char, LexError> for Lexer {
                 self.cursor += 1;
                 if *x == '\n' {
                     self.row += 1;
-                    self.col = 1;
+                    self.col = 0;
                 } else {
                     self.col += 1;
                 }
