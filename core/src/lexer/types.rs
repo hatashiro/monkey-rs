@@ -92,9 +92,12 @@ pub struct LexError {
 pub struct Lexer {
     input: Vec<char>,
     cursor: usize,
-    saved_cursor: usize,
     row: i32,
     col: i32,
+    met_newline: bool,
+    saved_cursor: usize,
+    saved_row: i32,
+    saved_col: i32,
 }
 
 impl Lexer {
@@ -104,9 +107,12 @@ impl Lexer {
         Lexer {
             input: input.collect(),
             cursor: 0,
-            saved_cursor: 0,
             row: 1,
             col: 0,
+            met_newline: false,
+            saved_cursor: 0,
+            saved_row: 1,
+            saved_col: 0,
         }
     }
 }
@@ -116,11 +122,17 @@ impl Parser<char, LexError> for Lexer {
         match self.input.get(self.cursor) {
             Some(x) => {
                 self.cursor += 1;
-                if *x == '\n' {
+
+                if self.met_newline {
                     self.row += 1;
-                    self.col = 0;
+                    self.col = 1;
+                    self.met_newline = false;
                 } else {
                     self.col += 1;
+                }
+
+                if *x == '\n' {
+                    self.met_newline = true;
                 }
                 Some(x.clone())
             }
@@ -145,9 +157,45 @@ impl Parser<char, LexError> for Lexer {
 
     fn save(&mut self) {
         self.saved_cursor = self.cursor;
+        self.saved_row = self.row;
+        self.saved_col = self.col;
     }
 
     fn load(&mut self) {
         self.cursor = self.saved_cursor;
+        self.row = self.saved_row;
+        self.col = self.saved_col;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pos() {
+        let mut l = Lexer::new(String::from("123\n 4\n5\n").chars());
+        l.consume();
+        assert_eq!(l.current_pos(), (1, 1));
+        l.consume();
+        assert_eq!(l.current_pos(), (1, 2));
+        l.consume();
+        assert_eq!(l.current_pos(), (1, 3));
+        l.consume();
+        assert_eq!(l.current_pos(), (1, 4));
+        l.consume();
+        assert_eq!(l.current_pos(), (2, 1));
+        l.consume();
+        assert_eq!(l.current_pos(), (2, 2));
+        l.consume();
+        assert_eq!(l.current_pos(), (2, 3));
+        l.consume();
+        assert_eq!(l.current_pos(), (3, 1));
+        l.consume();
+        assert_eq!(l.current_pos(), (3, 2));
+        l.consume();
+        assert_eq!(l.current_pos(), (3, 2));
+        l.consume();
+        assert_eq!(l.current_pos(), (3, 2));
     }
 }
