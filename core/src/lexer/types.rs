@@ -89,7 +89,7 @@ pub struct LexError {
     pos: (i32, i32),
 }
 
-struct Lexer {
+pub struct Lexer {
     input: Vec<char>,
     cursor: usize,
     saved_cursor: usize,
@@ -98,7 +98,7 @@ struct Lexer {
 }
 
 impl Lexer {
-    fn new<I>(input: I) -> Lexer
+    pub fn new<I>(input: I) -> Lexer
         where I: Iterator<Item = char>
     {
         Lexer {
