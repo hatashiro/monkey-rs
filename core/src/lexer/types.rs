@@ -1,4 +1,5 @@
 use std::result;
+use common::combinator::*;
 
 pub type Result<T> = result::Result<T, LexError>;
 
@@ -83,4 +84,70 @@ token_defs!(Token => {
 });
 
 #[derive(Debug)]
-pub struct LexError {}
+pub struct LexError {
+    message: String,
+    pos: (i32, i32),
+}
+
+struct Lexer {
+    input: Vec<char>,
+    cursor: usize,
+    saved_cursor: usize,
+    row: i32,
+    col: i32,
+}
+
+impl Lexer {
+    fn new<I>(input: I) -> Lexer
+        where I: Iterator<Item = char>
+    {
+        Lexer {
+            input: input.collect(),
+            cursor: 0,
+            saved_cursor: 0,
+            row: 1,
+            col: 1,
+        }
+    }
+}
+
+impl Parser<char, LexError> for Lexer {
+    fn consume(&mut self) -> Option<char> {
+        match self.input.get(self.cursor) {
+            Some(x) => {
+                self.cursor += 1;
+                if *x == '\n' {
+                    self.row += 1;
+                    self.col = 1;
+                } else {
+                    self.col += 1;
+                }
+                Some(x.clone())
+            }
+            None => None,
+        }
+    }
+
+    fn preview(&self) -> Option<&char> {
+        self.input.get(self.cursor)
+    }
+
+    fn current_pos(&self) -> (i32, i32) {
+        (self.row, self.col)
+    }
+
+    fn error<S: Into<String>>(&self, message: S) -> LexError {
+        LexError {
+            message: message.into(),
+            pos: self.current_pos(),
+        }
+    }
+
+    fn save(&mut self) {
+        self.saved_cursor = self.cursor;
+    }
+
+    fn load(&mut self) {
+        self.cursor = self.saved_cursor;
+    }
+}

@@ -2,7 +2,7 @@ use std::cmp::Eq;
 use std::fmt::Display;
 use std::iter::FromIterator;
 
-trait Parser<T: Display + Eq, E>: Sized {
+pub trait Parser<T: Display + Eq, E>: Sized {
     fn preview(&self) -> Option<&T>;
     fn consume(&mut self) -> Option<T>;
     fn current_pos(&self) -> (i32, i32);
