@@ -7,7 +7,7 @@ macro_rules! token_defs {
     ($enum_name:ident => {
         $($name:ident,)*
     }) => {
-        #[derive(Debug)]
+        #[derive(PartialEq, Debug)]
         pub enum $enum_name {
             $(
                 $name(i32, i32, String),
