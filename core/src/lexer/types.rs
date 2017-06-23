@@ -106,7 +106,7 @@ impl Lexer {
             cursor: 0,
             saved_cursor: 0,
             row: 1,
-            col: 1,
+            col: 0,
         }
     }
 }
