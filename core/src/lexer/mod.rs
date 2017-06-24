@@ -6,8 +6,63 @@ use common::combinator::Parser;
 
 pub fn tokenize<T: Iterator<Item = char>>(input: T) -> Result<Vec<Token>> {
     let mut l = Lexer::new(input);
-    // FIXME
-    l.atom('h').and_then(|c| Ok(Vec::default()))
+
+    let mut result = Vec::default();
+
+    loop {
+        let _ = skip_whitespaces(&mut l);
+        match l.preview() {
+            None => break,
+            _ => {
+                result.push(try!(lex_token(&mut l)));
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+fn skip_whitespaces(l: &mut Lexer) -> Result<Vec<char>> {
+    l.many(|l| l.predicate(|x| [' ', '\t', '\n', '\r'].contains(x)))
+}
+
+fn lex_token(l: &mut Lexer) -> Result<Token> {
+    l.choose(&[&|l| lex_operator(l), &|l| lex_punctuation(l)])
+}
+
+macro_rules! parse_map {
+    ($pat:expr, $tok:ident) => {
+        &|l| {
+            let pos = l.current_pos();
+            let lit: String = try!(l.string($pat.chars()));
+            Ok(token!($tok, pos.0, pos.1, lit))
+        }
+    }
+}
+
+fn lex_operator(l: &mut Lexer) -> Result<Token> {
+    l.choose(&[parse_map!("==", Eq),
+               parse_map!("=", Assign),
+               parse_map!("+", Plus),
+               parse_map!("-", Minus),
+               parse_map!("*", Multiply),
+               parse_map!("/", Divide),
+               parse_map!("!=", NotEq),
+               parse_map!("!", Not),
+               parse_map!(">", GreaterThan),
+               parse_map!("<", LessThan)])
+}
+
+fn lex_punctuation(l: &mut Lexer) -> Result<Token> {
+    l.choose(&[parse_map!(":", Colon),
+               parse_map!(";", SemiColon),
+               parse_map!(",", Comma),
+               parse_map!("(", LParen),
+               parse_map!(")", RParen),
+               parse_map!("{", LBrace),
+               parse_map!("}", RBrace),
+               parse_map!("[", LBracket),
+               parse_map!("]", RBracket)])
 }
 
 #[cfg(test)]
@@ -199,9 +254,9 @@ return false;
     fn hash_tokens() {
         vec_eq(&lex("{\"hello\": \"world\"}"),
                &vec![token!(LBrace, 1, 1, "{"),
-                     token!(StringLiteral, 1, 2, "\"hello\""),
-                     token!(Colon, 1, 9, ":"),
-                     token!(StringLiteral, 1, 11, "\"world\""),
-                     token!(RBrace, 1, 18, "}")]);
+                    token!(StringLiteral, 1, 2, "\"hello\""),
+                    token!(Colon, 1, 9, ":"),
+                    token!(StringLiteral, 1, 11, "\"world\""),
+                    token!(RBrace, 1, 18, "}")]);
     }
 }
