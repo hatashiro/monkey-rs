@@ -3,6 +3,7 @@ pub mod types;
 
 use self::types::*;
 use common::combinator::Parser;
+use common::util::*;
 use std::iter::FromIterator;
 
 pub fn tokenize<T: Iterator<Item = char>>(input: T) -> Result<Vec<Token>> {
@@ -28,7 +29,10 @@ fn skip_whitespaces(l: &mut Lexer) -> Result<Vec<char>> {
 }
 
 fn lex_token(l: &mut Lexer) -> Result<Token> {
-    l.choose(&[&lex_operator, &lex_punctuation, &lex_string])
+    l.choose(&[&lex_operator,
+               &lex_punctuation,
+               &lex_string,
+               &lex_reserved_or_ident])
 }
 
 macro_rules! parse_map {
@@ -82,6 +86,24 @@ fn lex_string(l: &mut Lexer) -> Result<Token> {
     }
 
     Ok(token!(StringLiteral, pos.0, pos.1, String::from_iter(result)))
+}
+
+fn lex_reserved_or_ident(l: &mut Lexer) -> Result<Token> {
+    let pos = l.current_pos();
+    let fst = try!(l.predicate(is_letter)).to_string();
+    let rest: String = try!(l.many(|l| l.predicate(is_letter_or_digit)));
+    let name = fst + &rest;
+
+    Ok(match name.as_ref() {
+           "let" => token!(Let, pos.0, pos.1, name),
+           "fn" => token!(Function, pos.0, pos.1, name),
+           "if" => token!(If, pos.0, pos.1, name),
+           "else" => token!(Else, pos.0, pos.1, name),
+           "return" => token!(Return, pos.0, pos.1, name),
+           "true" => token!(BoolLiteral, pos.0, pos.1, name),
+           "false" => token!(BoolLiteral, pos.0, pos.1, name),
+           _ => token!(Ident, pos.0, pos.1, name),
+       })
 }
 
 #[cfg(test)]
