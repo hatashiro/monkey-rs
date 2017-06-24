@@ -1,3 +1,4 @@
+use std::fmt;
 use std::result;
 use common::combinator::*;
 
@@ -7,7 +8,7 @@ macro_rules! token_defs {
     ($enum_name:ident => {
         $($name:ident,)*
     }) => {
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Eq, Clone, Debug)]
         pub enum $enum_name {
             $(
                 $name(i32, i32, String),
@@ -82,6 +83,12 @@ token_defs!(Token => {
     LBracket,
     RBracket,
 });
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.literal())
+    }
+}
 
 #[derive(Debug)]
 pub struct LexError {
