@@ -90,4 +90,118 @@ let result = add(five, ten);
                      token!(RParen, 7, 27, ")"),
                      token!(SemiColon, 7, 28, ";")]);
     }
+
+    #[test]
+    fn complex_code2() {
+        vec_eq(&lex("
+if (a == 10) {
+  return a;
+} else if (a != 20) {
+  return !a;
+} else if (a > 20) {
+  return -30 / 40 * 50;
+} else if (a < 30) {
+  return true;
+}
+return false;
+                    "),
+               &vec![token!(If, 2, 1, "if"),
+                     token!(LParen, 2, 3, "("),
+                     token!(Ident, 2, 4, "a"),
+                     token!(Eq, 2, 6, "=="),
+                     token!(IntLiteral, 2, 9, "10"),
+                     token!(RParen, 2, 11, ")"),
+                     token!(LBrace, 2, 13, "{"),
+                     token!(Return, 3, 3, "return"),
+                     token!(Ident, 3, 10, "a"),
+                     token!(SemiColon, 3, 11, ";"),
+                     token!(RBrace, 4, 1, "}"),
+                     token!(Else, 4, 3, "else"),
+                     token!(If, 4, 8, "if"),
+                     token!(LParen, 4, 11, "("),
+                     token!(Ident, 4, 12, "a"),
+                     token!(NotEq, 4, 14, "!="),
+                     token!(IntLiteral, 4, 17, "20"),
+                     token!(RParen, 4, 19, ")"),
+                     token!(LBrace, 4, 21, "{"),
+                     token!(Return, 5, 3, "return"),
+                     token!(Not, 5, 10, "!"),
+                     token!(Ident, 5, 11, "a"),
+                     token!(SemiColon, 5, 13, ";"),
+                     token!(RBrace, 6, 1, "}"),
+                     token!(Else, 6, 3, "else"),
+                     token!(If, 6, 8, "if"),
+                     token!(LParen, 6, 11, "("),
+                     token!(Ident, 6, 12, "a"),
+                     token!(GreaterThan, 6, 14, ">"),
+                     token!(IntLiteral, 6, 16, "20"),
+                     token!(RParen, 6, 18, ")"),
+                     token!(LBrace, 6, 20, "{"),
+                     token!(Return, 7, 3, "return"),
+                     token!(Minus, 7, 10, "-"),
+                     token!(IntLiteral, 7, 11, "30"),
+                     token!(Divide, 7, 14, "/"),
+                     token!(IntLiteral, 7, 16, "40"),
+                     token!(Multiply, 7, 19, "*"),
+                     token!(IntLiteral, 7, 21, "50"),
+                     token!(SemiColon, 7, 23, ";"),
+                     token!(RBrace, 8, 1, "}"),
+                     token!(Else, 8, 3, "else"),
+                     token!(If, 8, 8, "if"),
+                     token!(LParen, 8, 11, "("),
+                     token!(Ident, 8, 12, "a"),
+                     token!(LessThan, 8, 14, "<"),
+                     token!(IntLiteral, 8, 16, "30"),
+                     token!(RParen, 8, 18, ")"),
+                     token!(LBrace, 8, 20, "{"),
+                     token!(Return, 9, 3, "return"),
+                     token!(BoolLiteral, 9, 10, "true"),
+                     token!(SemiColon, 9, 14, ";"),
+                     token!(RBrace, 10, 1, "}"),
+                     token!(Return, 11, 1, "return"),
+                     token!(BoolLiteral, 11, 8, "false"),
+                     token!(SemiColon, 11, 13, ";")]);
+    }
+
+    #[test]
+    fn id_with_numbers() {
+        vec_eq(&lex("hello2 hel301oo120"),
+               &vec![token!(Ident, 1, 1, "hello2"),
+                     token!(Ident, 1, 8, "hel301oo120")]);
+    }
+
+    #[test]
+    fn string_literals() {
+        vec_eq(&lex("\"foobar\""),
+               &vec![token!(StringLiteral, 1, 1, "\"foobar\"")]);
+        vec_eq(&lex("\"foo bar\""),
+               &vec![token!(StringLiteral, 1, 1, "\"foo bar\"")]);
+        vec_eq(&lex("\"foo\\nbar\""),
+               &vec![token!(StringLiteral, 1, 1, "\"foo\\nbar\"")]);
+        vec_eq(&lex("\"foo\\tbar\""),
+               &vec![token!(StringLiteral, 1, 1, "\"foo\\tbar\"")]);
+        vec_eq(&lex("\"foo\\\"bar\""),
+               &vec![token!(StringLiteral, 1, 1, "\"foo\\\"bar\"")]);
+    }
+
+    #[test]
+    fn array_tokens() {
+        vec_eq(&lex("[1, 2];"),
+               &vec![token!(LBracket, 1, 1, "["),
+                     token!(IntLiteral, 1, 2, "1"),
+                     token!(Comma, 1, 3, ","),
+                     token!(IntLiteral, 1, 5, "2"),
+                     token!(RBracket, 1, 6, "]"),
+                     token!(SemiColon, 1, 7, ";")]);
+    }
+
+    #[test]
+    fn hash_tokens() {
+        vec_eq(&lex("{\"hello\": \"world\"}"),
+               &vec![token!(LBrace, 1, 1, "{"),
+                     token!(StringLiteral, 1, 2, "\"hello\""),
+                     token!(Colon, 1, 9, ":"),
+                     token!(StringLiteral, 1, 11, "\"world\""),
+                     token!(RBrace, 1, 18, "}")]);
+    }
 }
