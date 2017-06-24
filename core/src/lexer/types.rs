@@ -94,7 +94,6 @@ pub struct Lexer {
     cursor: usize,
     row: i32,
     col: i32,
-    met_newline: bool,
     saved_cursor: usize,
     saved_row: i32,
     saved_col: i32,
@@ -108,11 +107,10 @@ impl Lexer {
             input: input.collect(),
             cursor: 0,
             row: 1,
-            col: 0,
-            met_newline: false,
+            col: 1,
             saved_cursor: 0,
             saved_row: 1,
-            saved_col: 0,
+            saved_col: 1,
         }
     }
 }
@@ -123,17 +121,13 @@ impl Parser<char, LexError> for Lexer {
             Some(x) => {
                 self.cursor += 1;
 
-                if self.met_newline {
+                if *x == '\n' {
                     self.row += 1;
                     self.col = 1;
-                    self.met_newline = false;
                 } else {
                     self.col += 1;
                 }
 
-                if *x == '\n' {
-                    self.met_newline = true;
-                }
                 Some(x.clone())
             }
             None => None,
@@ -175,7 +169,6 @@ mod tests {
     #[test]
     fn pos() {
         let mut l = Lexer::new(String::from("123\n 4\n5\n").chars());
-        l.consume();
         assert_eq!(l.current_pos(), (1, 1));
         l.consume();
         assert_eq!(l.current_pos(), (1, 2));
@@ -194,8 +187,9 @@ mod tests {
         l.consume();
         assert_eq!(l.current_pos(), (3, 2));
         l.consume();
-        assert_eq!(l.current_pos(), (3, 2));
+        assert_eq!(l.current_pos(), (4, 1));
         l.consume();
-        assert_eq!(l.current_pos(), (3, 2));
+        assert_eq!(l.current_pos(), (4, 1));
+        l.consume();
     }
 }
