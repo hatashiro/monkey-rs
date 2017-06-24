@@ -87,6 +87,7 @@ token_defs!(Token => {
 pub struct LexError {
     message: String,
     pos: (i32, i32),
+    token: char,
 }
 
 pub struct Lexer {
@@ -94,6 +95,7 @@ pub struct Lexer {
     cursor: usize,
     row: i32,
     col: i32,
+    last_char_info: (i32, i32, char),
     saved_cursor: usize,
     saved_row: i32,
     saved_col: i32,
@@ -108,6 +110,7 @@ impl Lexer {
             cursor: 0,
             row: 1,
             col: 1,
+            last_char_info: (1, 0, '^'),
             saved_cursor: 0,
             saved_row: 1,
             saved_col: 1,
@@ -121,6 +124,9 @@ impl Parser<char, LexError> for Lexer {
             Some(x) => {
                 self.cursor += 1;
 
+                self.last_char_info.0 = self.row;
+                self.last_char_info.1 = self.col;
+
                 if *x == '\n' {
                     self.row += 1;
                     self.col = 1;
@@ -128,7 +134,9 @@ impl Parser<char, LexError> for Lexer {
                     self.col += 1;
                 }
 
-                Some(x.clone())
+                let c = x.clone();
+                self.last_char_info.2 = c;
+                Some(c)
             }
             None => None,
         }
@@ -145,7 +153,8 @@ impl Parser<char, LexError> for Lexer {
     fn error<S: Into<String>>(&self, message: S) -> LexError {
         LexError {
             message: message.into(),
-            pos: self.current_pos(),
+            pos: (self.last_char_info.0, self.last_char_info.1),
+            token: self.last_char_info.2,
         }
     }
 
