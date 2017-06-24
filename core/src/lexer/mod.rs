@@ -33,7 +33,8 @@ fn lex_token(l: &mut Lexer) -> Result<Token> {
                &lex_punctuation,
                &lex_string,
                &lex_reserved_or_ident,
-               &lex_integer])
+               &lex_integer,
+               &lex_illegal])
 }
 
 macro_rules! parse_map {
@@ -111,6 +112,11 @@ fn lex_integer(l: &mut Lexer) -> Result<Token> {
     let pos = l.current_pos();
     let lit: String = try!(l.many(|l| l.predicate(is_digit)));
     Ok(token!(IntLiteral, pos.0, pos.1, lit))
+}
+
+fn lex_illegal(l: &mut Lexer) -> Result<Token> {
+    let pos = l.current_pos();
+    Ok(token!(Illegal, pos.0, pos.1, try!(l.next())))
 }
 
 #[cfg(test)]
