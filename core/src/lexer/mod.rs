@@ -3,6 +3,7 @@ pub mod types;
 
 use self::types::*;
 use common::combinator::Parser;
+use std::iter::FromIterator;
 
 pub fn tokenize<T: Iterator<Item = char>>(input: T) -> Result<Vec<Token>> {
     let mut l = Lexer::new(input);
@@ -27,7 +28,7 @@ fn skip_whitespaces(l: &mut Lexer) -> Result<Vec<char>> {
 }
 
 fn lex_token(l: &mut Lexer) -> Result<Token> {
-    l.choose(&[&lex_operator, &lex_punctuation])
+    l.choose(&[&lex_operator, &lex_punctuation, &lex_string])
 }
 
 macro_rules! parse_map {
@@ -63,6 +64,24 @@ fn lex_punctuation(l: &mut Lexer) -> Result<Token> {
                parse_map!("}", RBrace),
                parse_map!("[", LBracket),
                parse_map!("]", RBracket)])
+}
+
+fn lex_string(l: &mut Lexer) -> Result<Token> {
+    let pos = l.current_pos();
+    let mut result = Vec::default();
+
+    result.push(try!(l.atom('"')));
+    loop {
+        let c = try!(l.next());
+        result.push(c);
+        match c {
+            '\\' => result.push(try!(l.next())),
+            '"' => break,
+            _ => continue,
+        }
+    }
+
+    Ok(token!(StringLiteral, pos.0, pos.1, String::from_iter(result)))
 }
 
 #[cfg(test)]
