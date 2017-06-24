@@ -32,7 +32,8 @@ fn lex_token(l: &mut Lexer) -> Result<Token> {
     l.choose(&[&lex_operator,
                &lex_punctuation,
                &lex_string,
-               &lex_reserved_or_ident])
+               &lex_reserved_or_ident,
+               &lex_integer])
 }
 
 macro_rules! parse_map {
@@ -104,6 +105,12 @@ fn lex_reserved_or_ident(l: &mut Lexer) -> Result<Token> {
            "false" => token!(BoolLiteral, pos.0, pos.1, name),
            _ => token!(Ident, pos.0, pos.1, name),
        })
+}
+
+fn lex_integer(l: &mut Lexer) -> Result<Token> {
+    let pos = l.current_pos();
+    let lit: String = try!(l.many(|l| l.predicate(is_digit)));
+    Ok(token!(IntLiteral, pos.0, pos.1, lit))
 }
 
 #[cfg(test)]
