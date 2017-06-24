@@ -27,7 +27,7 @@ fn skip_whitespaces(l: &mut Lexer) -> Result<Vec<char>> {
 }
 
 fn lex_token(l: &mut Lexer) -> Result<Token> {
-    l.choose(&[&|l| lex_operator(l), &|l| lex_punctuation(l)])
+    l.choose(&[&lex_operator, &lex_punctuation])
 }
 
 macro_rules! parse_map {
