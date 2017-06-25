@@ -35,7 +35,6 @@ macro_rules! token_defs {
     }
 }
 
-#[macro_export]
 macro_rules! token {
     ($token:ident, $row:expr, $col:expr, $literal:expr) => {
         Token::$token($row, $col, $literal.to_string())
