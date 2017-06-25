@@ -1,9 +1,9 @@
 use lexer::types::*;
 
 #[derive(Debug)]
-pub struct Program(BlockStmt);
+pub struct Program(pub BlockStmt);
 
-type BlockStmt = Vec<Stmt>;
+pub type BlockStmt = Vec<Stmt>;
 
 #[derive(Debug)]
 pub enum Stmt {
@@ -31,7 +31,7 @@ pub enum Expr {
 }
 
 #[derive(Debug)]
-pub struct Ident(String, Token);
+pub struct Ident(pub String, pub Token);
 
 #[derive(Debug)]
 pub enum Literal {
