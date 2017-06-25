@@ -1,53 +1,53 @@
 use lexer::types::*;
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Program(pub BlockStmt);
 
 pub type BlockStmt = Vec<Stmt>;
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum Stmt {
-    LetStmt(Ident, Expr),
-    ReturnStmt(Expr),
-    ExprStmt(Expr),
+    Let(Ident, Expr),
+    Return(Expr),
+    Expr(Expr),
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum Expr {
-    IdentExpr(Ident),
-    LitExpr(Literal),
-    PrefixExpr(PrefixOp, Box<Expr>),
-    InfixExpr(InfixOp, Box<Expr>, Box<Expr>),
-    IfExpr {
+    Ident(Ident),
+    Lit(Literal),
+    Prefix(PrefixOp, Box<Expr>),
+    Infix(InfixOp, Box<Expr>, Box<Expr>),
+    If {
         cond: Box<Expr>,
         con: BlockStmt,
         alt: Option<BlockStmt>,
     },
-    FnExpr { params: Vec<Ident>, body: BlockStmt },
-    CallExpr { func: Box<Expr>, args: Vec<Expr> },
-    ArrayExpr(Vec<Expr>),
-    HashExpr(Vec<(Literal, Expr)>),
-    IndexExpr { target: Box<Expr>, index: Box<Expr> },
+    Fn { params: Vec<Ident>, body: BlockStmt },
+    Call { func: Box<Expr>, args: Vec<Expr> },
+    Array(Vec<Expr>),
+    Hash(Vec<(Literal, Expr)>),
+    Index { target: Box<Expr>, index: Box<Expr> },
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Ident(pub String, pub Token);
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum Literal {
-    IntLiteral(i64, Token),
-    BoolLiteral(bool, Token),
-    StringLiteral(String, Token),
+    Int(i64, Token),
+    Bool(bool, Token),
+    String(String, Token),
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum PrefixOp {
     Plus(Token),
     Minus(Token),
     Not(Token),
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum InfixOp {
     Plus(Token),
     Minus(Token),
