@@ -25,6 +25,12 @@ mod tests {
         assert_eq!(parse(tokens).unwrap(), Program(stmts));
     }
 
+    fn code_result_eq(code1: &str, code2: &str) {
+        let tokens1 = lexer::tokenize(s(code1).chars()).unwrap();
+        let tokens2 = lexer::tokenize(s(code2).chars()).unwrap();
+        assert_eq!(parse(tokens1).unwrap(), parse(tokens2).unwrap());
+    }
+
     #[test]
     fn empty() {
         program_eq("", vec![]);
@@ -216,5 +222,240 @@ fn(a, b) { return a + b; }(1, 2);
                                                ]
                        })
                    ]);
+    }
+
+    #[test]
+    fn identifier() {
+        program_eq("foobar;", vec![Stmt::Expr(Expr::Ident(Ident(s("foobar"), token!(Ident, 1, 1, "foobar"))))]);
+        program_eq("foobar", vec![Stmt::Expr(Expr::Ident(Ident(s("foobar"), token!(Ident, 1, 1, "foobar"))))]);
+    }
+
+    #[test]
+    fn prefix_expr() {
+        program_eq("-foobar;", vec![Stmt::Expr(Expr::Prefix(PrefixOp::Minus(token!(Minus, 1, 1, "-")),
+                                                            Box::new(Expr::Ident(Ident(s("foobar"), token!(Ident, 1, 2, "foobar"))))
+        ))]);
+        program_eq("+10", vec![Stmt::Expr(Expr::Prefix(PrefixOp::Plus(token!(Plus, 1, 1, "+")),
+                                                       Box::new(Expr::Lit(Literal::Int(10, token!(IntLiteral, 1, 2, "10"))))
+        ))]);
+        program_eq("!true", vec![Stmt::Expr(Expr::Prefix(PrefixOp::Not(token!(Not, 1, 1, "!")),
+                                                         Box::new(Expr::Lit(Literal::Bool(true, token!(BoolLiteral, 1, 2, "true"))))
+        ))]);
+    }
+
+    #[test]
+    fn prefix_expr2() {
+        program_eq("-(foobar);", vec![Stmt::Expr(Expr::Prefix(PrefixOp::Minus(token!(Minus, 1, 1, "-")),
+                                                            Box::new(Expr::Ident(Ident(s("foobar"), token!(Ident, 1, 3, "foobar"))))
+        ))]);
+        program_eq("(+(10))", vec![Stmt::Expr(Expr::Prefix(PrefixOp::Plus(token!(Plus, 1, 2, "+")),
+                                                       Box::new(Expr::Lit(Literal::Int(10, token!(IntLiteral, 1, 4, "10"))))
+        ))]);
+        program_eq("(((!true)))", vec![Stmt::Expr(Expr::Prefix(PrefixOp::Not(token!(Not, 1, 4, "!")),
+                                                         Box::new(Expr::Lit(Literal::Bool(true, token!(BoolLiteral, 1, 5, "true"))))
+        ))]);
+    }
+
+    #[test]
+    fn infix_expr() {
+        program_eq("10 + 20", vec![Stmt::Expr(Expr::Infix(InfixOp::Plus(token!(Plus, 1, 4, "+")),
+                                                          Box::new(Expr::Lit(Literal::Int(10, token!(IntLiteral, 1, 1, "10")))),
+                                                          Box::new(Expr::Lit(Literal::Int(20, token!(IntLiteral, 1, 6, "20"))))))]);
+        program_eq("10 * 20", vec![Stmt::Expr(Expr::Infix(InfixOp::Multiply(token!(Multiply, 1, 4, "*")),
+                                                          Box::new(Expr::Lit(Literal::Int(10, token!(IntLiteral, 1, 1, "10")))),
+                                                          Box::new(Expr::Lit(Literal::Int(20, token!(IntLiteral, 1, 6, "20"))))))]);
+        code_result_eq("10 + 5 / -20 - (x + x)", "10 + (5 / (-20)) - (x + x)");
+        program_eq("10 + 5 / -20 - (x + x)", vec![
+            Stmt::Expr(
+                Expr::Infix(
+                    InfixOp::Minus(token!(Minus, 1, 14, "-")),
+                    Box::new(
+                        Expr::Infix(
+                            InfixOp::Plus(token!(Plus, 1, 4, "+")),
+                            Box::new(Expr::Lit(Literal::Int(10, token!(IntLiteral, 1, 1, "10")))),
+                            Box::new(
+                                Expr::Infix(
+                                    InfixOp::Divide(token!(Divide, 1, 8, "/")),
+                                    Box::new(Expr::Lit(Literal::Int(5, token!(IntLiteral, 1, 1, "5")))),
+                                    Box::new(
+                                        Expr::Prefix(
+                                            PrefixOp::Minus(token!(Minus, 1, 10, "-")),
+                                            Box::new(Expr::Lit(Literal::Int(20, token!(IntLiteral, 1, 11, "20"))))
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    Box::new(
+                        Expr::Infix(
+                            InfixOp::Plus(token!(Plus, 1, 19, "+")),
+                            Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 1, 17, "x")))),
+                            Box::new(Expr::Ident(Ident(s("y"), token!(Ident, 1, 21, "y"))))
+                        )
+                    )
+                )
+            )
+        ]);
+    }
+
+    #[test]
+    fn op_precedence() {
+        code_result_eq("!-a", "(!(-a))");
+        code_result_eq("a + b + c", "((a + b) + c)");
+        code_result_eq("a + b - c", "((a + b) - c)");
+        code_result_eq("a * b * c", "((a * b) * c)");
+        code_result_eq("a * b / c", "((a * b) / c)");
+        code_result_eq("a + b / c", "(a + (b / c))");
+        code_result_eq("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)");
+        code_result_eq("3 + 4; -5 * 5", "(3 + 4);((-5) * 5)");
+        code_result_eq("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))");
+        code_result_eq("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))");
+        code_result_eq("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))");
+    }
+
+    #[test]
+    fn if_expr() {
+        program_eq("if (x < y) { x }",
+                   vec![
+                       Stmt::Expr(
+                           Expr::If {
+                               cond: Box::new(
+                                   Expr::Infix(
+                                       InfixOp::LessThan(token!(LessThan, 1, 7, "<")),
+                                       Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 1, 5, "x")))),
+                                       Box::new(Expr::Ident(Ident(s("y"), token!(Ident, 1, 9, "y"))))
+                                   )
+                               ),
+                               con: vec![Stmt::Expr(
+                                   Expr::Ident(Ident(s("x"), token!(Ident, 1, 14, "x")))
+                               )],
+                               alt: None
+                           }
+                       )
+                   ]);
+        program_eq("if (x < y) { x } else { y }",
+                   vec![
+                       Stmt::Expr(
+                           Expr::If {
+                               cond: Box::new(
+                                   Expr::Infix(
+                                       InfixOp::LessThan(token!(LessThan, 1, 7, "<")),
+                                       Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 1, 5, "x")))),
+                                       Box::new(Expr::Ident(Ident(s("y"), token!(Ident, 1, 9, "y"))))
+                                   )
+                               ),
+                               con: vec![Stmt::Expr(
+                                   Expr::Ident(Ident(s("x"), token!(Ident, 1, 14, "x")))
+                               )],
+                               alt: Some(
+                                   vec![Stmt::Expr(
+                                       Expr::Ident(Ident(s("y"), token!(Ident, 1, 25, "y")))
+                                   )]
+                               )
+                           }
+                       )
+                   ]);
+    }
+
+    #[test]
+    fn string() {
+        program_eq("\"foobar\"", vec![Stmt::Expr(Expr::Lit(Literal::String(s("foobar"), token!(StringLiteral, 1, 1, "\"foobar\""))))]);
+        program_eq("\"foo bar\"", vec![Stmt::Expr(Expr::Lit(Literal::String(s("foo bar"), token!(StringLiteral, 1, 1, "\"foo bar\""))))]);
+        program_eq("\"foo\\nbar\"", vec![Stmt::Expr(Expr::Lit(Literal::String(s("foo\nbar"), token!(StringLiteral, 1, 1, "\"foo\\nbar\""))))]);
+        program_eq("\"foo\\tbar\"", vec![Stmt::Expr(Expr::Lit(Literal::String(s("foo\tbar"), token!(StringLiteral, 1, 1, "\"foo\\tbar\""))))]);
+        program_eq("\"foo\\\"bar\"", vec![Stmt::Expr(Expr::Lit(Literal::String(s("foo\"bar"), token!(StringLiteral, 1, 1, "\"foo\\\"bar\""))))]);
+    }
+
+    #[test]
+    fn array() {
+        program_eq("[1, 2 * 2, 3 + 3]",
+                   vec![Stmt::Expr(Expr::Array(vec![
+                       Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 2, "1"))),
+                       Expr::Infix(
+                           InfixOp::Multiply(token!(Multiply, 1, 7, "*")),
+                           Box::new(Expr::Lit(Literal::Int(2, token!(IntLiteral, 1, 5, "2")))),
+                           Box::new(Expr::Lit(Literal::Int(2, token!(IntLiteral, 1, 9, "2"))))
+                       ),
+                       Expr::Infix(
+                           InfixOp::Plus(token!(Plus, 1, 14, "+")),
+                           Box::new(Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 12, "3")))),
+                           Box::new(Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 16, "3"))))
+                       ),
+                   ]))]);
+        program_eq("myArray[1 + 1]",
+                   vec![Stmt::Expr(
+                       Expr::Index {
+                           target: Box::new(Expr::Ident(Ident(s("myArray"), token!(Ident, 1, 1, "myArray")))),
+                           index: Box::new(
+                               Expr::Infix(
+                                   InfixOp::Plus(token!(Plus, 1, 11, "+")),
+                                   Box::new(Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 9, "1")))),
+                                   Box::new(Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 13, "1"))))
+                               )
+                           )
+                       }
+                   )]);
+        code_result_eq("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][b * c])) * d)");
+        code_result_eq("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))");
+    }
+
+    #[test]
+    fn hash() {
+        program_eq("{}", vec![Stmt::Expr(Expr::Hash(vec![]))]);
+        program_eq("{\"one\": 1, \"two\": 2, \"three\": 3}",
+                   vec![Stmt::Expr(Expr::Hash(vec![
+                       (Literal::String(s("one"), token!(StringLiteral, 1, 2, "\"one\"")),
+                        Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 9, "1")))
+                       ),
+                       (Literal::String(s("two"), token!(StringLiteral, 1, 12, "\"two\"")),
+                        Expr::Lit(Literal::Int(2, token!(IntLiteral, 1, 19, "2")))
+                       ),
+                       (Literal::String(s("three"), token!(StringLiteral, 1, 22, "\"three\"")),
+                        Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 31, "3")))
+                       )
+                   ]))]);
+        program_eq("{4: 1, 5: 2, 6: 3}",
+                   vec![Stmt::Expr(Expr::Hash(vec![
+                       (Literal::Int(4, token!(IntLiteral, 1, 2, "4")),
+                        Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 5, "1")))
+                       ),
+                       (Literal::Int(5, token!(IntLiteral, 1, 8, "5")),
+                        Expr::Lit(Literal::Int(2, token!(IntLiteral, 1, 11, "2")))
+                       ),
+                       (Literal::Int(6, token!(IntLiteral, 1, 14, "6")),
+                        Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 17, "3")))
+                       )
+                   ]))]);
+        program_eq("{true: 1, false: 2}",
+                   vec![Stmt::Expr(Expr::Hash(vec![
+                       (Literal::Bool(true, token!(BoolLiteral, 1, 2, "true")),
+                        Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 8, "1")))
+                       ),
+                       (Literal::Bool(false, token!(BoolLiteral, 1, 11, "false")),
+                        Expr::Lit(Literal::Int(2, token!(IntLiteral, 1, 18, "2")))
+                       )
+                   ]))]);
+        program_eq("{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15/5}",
+                   vec![Stmt::Expr(Expr::Hash(vec![
+                       (Literal::String(s("one"), token!(StringLiteral, 1, 2, "\"one\"")),
+                        Expr::Infix(
+                            InfixOp::Plus(token!(Plus, 1, 11, "+")),
+                            Box::new(Expr::Lit(Literal::Int(0, token!(IntLiteral, 1, 9, "0")))),
+                            Box::new(Expr::Lit(Literal::Int(1, token!(IntLiteral, 1, 13, "1"))))
+                        )),
+                       (Literal::String(s("two"), token!(StringLiteral, 1, 16, "\"two\"")),
+                        Expr::Infix(
+                            InfixOp::Minus(token!(Minus, 1, 26, "-")),
+                            Box::new(Expr::Lit(Literal::Int(10, token!(IntLiteral, 1, 24, "10")))),
+                            Box::new(Expr::Lit(Literal::Int(8, token!(IntLiteral, 1, 28, "8"))))
+                        )),
+                       (Literal::String(s("three"), token!(StringLiteral, 1, 31, "\"three\"")),
+                        Expr::Infix(
+                            InfixOp::Divide(token!(Divide, 1, 42, "/")),
+                            Box::new(Expr::Lit(Literal::Int(15, token!(IntLiteral, 1, 40, "15")))),
+                            Box::new(Expr::Lit(Literal::Int(5, token!(IntLiteral, 1, 44, "5"))))
+                        ))
+                   ]))]);
     }
 }
