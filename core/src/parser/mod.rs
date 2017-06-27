@@ -28,7 +28,9 @@ fn parse_program(p: &mut Parser) -> Result<Program> {
 }
 
 fn parse_stmt(p: &mut Parser) -> Result<Stmt> {
-    p.choose(&[&parse_let_stmt])
+    p.choose(&[&parse_let_stmt,
+               &parse_return_stmt,
+               &parse_expr_stmt])
 }
 
 fn parse_let_stmt(p: &mut Parser) -> Result<Stmt> {
@@ -43,6 +45,26 @@ fn parse_let_stmt(p: &mut Parser) -> Result<Stmt> {
 fn parse_ident(p: &mut Parser) -> Result<Ident> {
     let id = try!(p.predicate(is!(Ident)));
     Ok(Ident(id.literal().clone(), id))
+}
+
+fn parse_return_stmt(p: &mut Parser) -> Result<Stmt> {
+    let _ = try!(p.predicate(is!(Return)));
+    let expr = try!(parse_expr(p));
+    p.optional(|p| p.predicate(is!(SemiColon)));
+    Ok(Stmt::Return(expr))
+}
+
+fn parse_expr_stmt(p: &mut Parser) -> Result<Stmt> {
+    let expr = try!(parse_expr(p));
+    p.optional(|p| p.predicate(is!(SemiColon)));
+    Ok(Stmt::Expr(expr))
+}
+
+fn parse_block_stmt(p: &mut Parser) -> Result<BlockStmt> {
+    let _ = try!(p.predicate(is!(LBrace)));
+    let ss = try!(p.many(parse_stmt));
+    let _ = try!(p.predicate(is!(RBrace)));
+    Ok(ss)
 }
 
 fn parse_expr(p: &mut Parser) -> Result<Expr> {
