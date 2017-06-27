@@ -3,12 +3,50 @@ pub mod types;
 
 use self::ast::*;
 use self::types::*;
+use common::combinator::Parser as P;
 use lexer::types::Token;
 
 pub fn parse(input: Vec<Token>) -> Result<Program> {
-    let p = Parser::new(input);
-    // FIXME
-    Ok(Program(Vec::default()))
+    let mut p = Parser::new(input);
+    parse_program(&mut p)
+}
+
+macro_rules! is {
+    ($pat:ident) => {
+        |x| {
+            match *x {
+                Token::$pat(..) => true,
+                _ => false,
+            }
+        }
+    }
+}
+
+fn parse_program(p: &mut Parser) -> Result<Program> {
+    let stmts = try!(p.many(parse_stmt));
+    Ok(Program(stmts))
+}
+
+fn parse_stmt(p: &mut Parser) -> Result<Stmt> {
+    p.choose(&[&parse_let_stmt])
+}
+
+fn parse_let_stmt(p: &mut Parser) -> Result<Stmt> {
+    let _ = p.predicate(is!(Let));
+    let ident = try!(parse_ident(p));
+    let _ = p.predicate(is!(Assign));
+    let expr = try!(parse_expr(p));
+    p.optional(|p| p.predicate(is!(SemiColon)));
+    Ok(Stmt::Let(ident, expr))
+}
+
+fn parse_ident(p: &mut Parser) -> Result<Ident> {
+    let id = try!(p.predicate(is!(Ident)));
+    Ok(Ident(id.literal().clone(), id))
+}
+
+fn parse_expr(p: &mut Parser) -> Result<Expr> {
+    unimplemented!()
 }
 
 #[cfg(test)]
