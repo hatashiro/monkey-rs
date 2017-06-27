@@ -2,7 +2,7 @@ use common::combinator;
 use std::result;
 use lexer::types::*;
 
-pub type Result<T> = result::Result<T, LexError>;
+pub type Result<T> = result::Result<T, ParseError>;
 
 #[derive(Debug)]
 pub struct ParseError {
