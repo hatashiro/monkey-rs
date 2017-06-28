@@ -158,7 +158,8 @@ fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
                &parse_ident_expr,
                &parse_prefix_expr,
                &parse_paren_expr,
-               &parse_if_expr])
+               &parse_if_expr,
+               &parse_fn_expr])
 }
 
 fn parse_lit_expr(p: &mut Parser) -> Result<Expr> {
@@ -237,6 +238,15 @@ fn parse_if_expr(p: &mut Parser) -> Result<Expr> {
         con,
         alt,
     })
+}
+
+fn parse_fn_expr(p: &mut Parser) -> Result<Expr> {
+    drop!(p.predicate(is!(Function)));
+    drop!(p.predicate(is!(LParen)));
+    let params = try!(parse_comma_separated(p, &parse_ident));
+    drop!(p.predicate(is!(RParen)));
+    let body = try!(parse_block_stmt(p));
+    Ok(Expr::Fn { params, body })
 }
 
 #[cfg(test)]
