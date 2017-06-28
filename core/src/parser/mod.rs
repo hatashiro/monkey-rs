@@ -157,7 +157,8 @@ fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
     p.choose(&[&parse_lit_expr,
                &parse_ident_expr,
                &parse_prefix_expr,
-               &parse_paren_expr])
+               &parse_paren_expr,
+               &parse_if_expr])
 }
 
 fn parse_lit_expr(p: &mut Parser) -> Result<Expr> {
@@ -219,6 +220,23 @@ fn parse_paren_expr(p: &mut Parser) -> Result<Expr> {
     let expr = try!(parse_expr(p));
     drop!(p.predicate(is!(RParen)));
     Ok(expr)
+}
+
+fn parse_if_expr(p: &mut Parser) -> Result<Expr> {
+    drop!(p.predicate(is!(If)));
+    drop!(p.predicate(is!(LParen)));
+    let cond = try!(parse_expr(p));
+    drop!(p.predicate(is!(RParen)));
+    let con = try!(parse_block_stmt(p));
+    let alt = match p.try(|p| p.predicate(is!(Else))) {
+        Ok(_) => Some(try!(parse_block_stmt(p))),
+        Err(_) => None,
+    };
+    Ok(Expr::If {
+        cond: Box::new(cond),
+        con,
+        alt,
+    })
 }
 
 #[cfg(test)]
