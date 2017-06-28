@@ -100,7 +100,7 @@ fn parse_pratt_expr(p: &mut Parser, prec: Prec) -> Result<Expr> {
         if prec >= peek_prec {
             break;
         }
-        match prec {
+        match peek_prec {
             Prec::Call => {
                 left = try!(parse_call_expr(p, left));
             }
