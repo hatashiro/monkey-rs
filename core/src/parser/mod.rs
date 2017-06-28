@@ -113,7 +113,36 @@ fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
 }
 
 fn parse_lit_expr(p: &mut Parser) -> Result<Expr> {
-    unimplemented!()
+    let lit = try!(parse_literal(p));
+    Ok(Expr::Lit(lit))
+}
+
+fn parse_literal(p: &mut Parser) -> Result<Literal> {
+    p.choose(&[&parse_int_literal,
+               &parse_bool_literal,
+               &parse_string_literal])
+}
+
+fn parse_int_literal(p: &mut Parser) -> Result<Literal> {
+    let token = try!(p.predicate(is!(IntLiteral)));
+    Ok(Literal::Int(token.literal().parse().unwrap(), token))
+}
+
+fn parse_bool_literal(p: &mut Parser) -> Result<Literal> {
+    let token = try!(p.predicate(is!(BoolLiteral)));
+    Ok(Literal::Bool(token.literal().parse().unwrap(), token))
+}
+
+fn parse_string_literal(p: &mut Parser) -> Result<Literal> {
+    let token = try!(p.predicate(is!(StringLiteral)));
+
+    let val = token.literal().trim_matches('"')
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\\\", "\\")
+        .replace("\\\"", "\"");
+
+    Ok(Literal::String(val, token))
 }
 
 fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
