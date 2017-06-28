@@ -111,7 +111,8 @@ fn parse_pratt_expr(p: &mut Parser, prec: Prec) -> Result<Expr> {
 fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
     p.choose(&[&parse_lit_expr,
                &parse_ident_expr,
-               &parse_prefix_expr])
+               &parse_prefix_expr,
+               &parse_paren_expr])
 }
 
 fn parse_lit_expr(p: &mut Parser) -> Result<Expr> {
@@ -166,6 +167,13 @@ fn parse_prefix_expr(p: &mut Parser) -> Result<Expr> {
     let expr = try!(parse_atom_expr(p));
 
     Ok(Expr::Prefix(prefix_op, Box::new(expr)))
+}
+
+fn parse_paren_expr(p: &mut Parser) -> Result<Expr> {
+    let _ = try!(p.predicate(is!(LParen)));
+    let expr = try!(parse_expr(p));
+    let _ = try!(p.predicate(is!(RParen)));
+    Ok(expr)
 }
 
 fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
