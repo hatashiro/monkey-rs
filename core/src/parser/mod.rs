@@ -115,6 +115,21 @@ fn parse_pratt_expr(p: &mut Parser, prec: Prec) -> Result<Expr> {
     Ok(left)
 }
 
+fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
+    unimplemented!()
+}
+
+fn parse_index_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
+    unimplemented!()
+}
+
+fn parse_infix_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
+    let (prec, op) = try!(p.next().map(|x| infix_op(&x)));
+    let op = op.unwrap();
+    let right = try!(parse_pratt_expr(p, prec));
+    Ok(Expr::Infix(op, Box::new(left), Box::new(right)))
+}
+
 fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
     p.choose(&[&parse_lit_expr,
                &parse_ident_expr,
@@ -181,18 +196,6 @@ fn parse_paren_expr(p: &mut Parser) -> Result<Expr> {
     let expr = try!(parse_expr(p));
     drop!(p.predicate(is!(RParen)));
     Ok(expr)
-}
-
-fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
-    unimplemented!()
-}
-
-fn parse_index_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
-    unimplemented!()
-}
-
-fn parse_infix_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
-    unimplemented!()
 }
 
 #[cfg(test)]
@@ -475,7 +478,7 @@ fn(a, b) { return a + b; }(1, 2);
                         Expr::Infix(
                             InfixOp::Plus(token!(Plus, 1, 19, "+")),
                             Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 1, 17, "x")))),
-                            Box::new(Expr::Ident(Ident(s("y"), token!(Ident, 1, 21, "y"))))
+                            Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 1, 21, "x"))))
                         )
                     )
                 )
