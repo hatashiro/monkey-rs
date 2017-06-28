@@ -236,10 +236,10 @@ let boo = true;
                                   Expr::Lit(Literal::Int(10, token!(IntLiteral, 3, 9, "10")))),
                         Stmt::Let(Ident(s("foobar"), token!(Ident, 4, 5, "foobar")),
                                   Expr::Lit(Literal::Int(838383,
-                                                         token!(IntLiteral, 3, 14, "838383")))),
+                                                         token!(IntLiteral, 4, 14, "838383")))),
                         Stmt::Let(Ident(s("boo"), token!(Ident, 5, 5, "boo")),
                                   Expr::Lit(Literal::Bool(true,
-                                                          token!(BoolLiteral, 4, 11, "true"))))]);
+                                                          token!(BoolLiteral, 5, 11, "true"))))]);
     }
 
     static CODE_RETURN_STMTS: &str = "
