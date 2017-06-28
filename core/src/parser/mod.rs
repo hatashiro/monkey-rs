@@ -115,12 +115,35 @@ fn parse_pratt_expr(p: &mut Parser, prec: Prec) -> Result<Expr> {
     Ok(left)
 }
 
-fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
-    unimplemented!()
+fn parse_call_expr(p: &mut Parser, func: Expr) -> Result<Expr> {
+    drop!(p.predicate(is!(LParen)));
+    let args = try!(parse_comma_separated(p, &parse_expr));
+    drop!(p.predicate(is!(RParen)));
+    Ok(Expr::Call { func: Box::new(func), args })
 }
 
-fn parse_index_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
-    unimplemented!()
+fn parse_comma_separated<X, F>(p: &mut Parser, parser: &F) -> Result<Vec<X>>
+    where F: Fn(&mut Parser) -> Result<X>,
+{
+    match p.try(parser) {
+        Ok(x) => {
+            let mut result = vec![x];
+            let xs: Vec<X>  = try!(p.many(|p| {
+                drop!(p.predicate(is!(Comma)));
+                parser(p)
+            }));
+            result.extend(xs);
+            Ok(result)
+        },
+        Err(_) => Ok(vec![]),
+    }
+}
+
+fn parse_index_expr(p: &mut Parser, target: Expr) -> Result<Expr> {
+    drop!(p.predicate(is!(LBracket)));
+    let index = try!(parse_expr(p));
+    drop!(p.predicate(is!(RBracket)));
+    Ok(Expr::Index { target: Box::new(target), index: Box::new(index) })
 }
 
 fn parse_infix_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
