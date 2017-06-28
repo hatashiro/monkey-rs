@@ -22,6 +22,12 @@ macro_rules! is {
     }
 }
 
+macro_rules! drop {
+    ($e:expr) => {{
+        let _ = try!($e);
+    }}
+}
+
 fn parse_program(p: &mut Parser) -> Result<Program> {
     let stmts = try!(p.many(parse_stmt));
     Ok(Program(stmts))
@@ -33,10 +39,11 @@ fn parse_stmt(p: &mut Parser) -> Result<Stmt> {
                &parse_expr_stmt])
 }
 
+
 fn parse_let_stmt(p: &mut Parser) -> Result<Stmt> {
-    let _ = p.predicate(is!(Let));
+    drop!(p.predicate(is!(Let)));
     let ident = try!(parse_ident(p));
-    let _ = p.predicate(is!(Assign));
+    drop!(p.predicate(is!(Assign)));
     let expr = try!(parse_expr(p));
     p.optional(|p| p.predicate(is!(SemiColon)));
     Ok(Stmt::Let(ident, expr))
@@ -48,7 +55,7 @@ fn parse_ident(p: &mut Parser) -> Result<Ident> {
 }
 
 fn parse_return_stmt(p: &mut Parser) -> Result<Stmt> {
-    let _ = try!(p.predicate(is!(Return)));
+    drop!(p.predicate(is!(Return)));
     let expr = try!(parse_expr(p));
     p.optional(|p| p.predicate(is!(SemiColon)));
     Ok(Stmt::Return(expr))
@@ -61,9 +68,9 @@ fn parse_expr_stmt(p: &mut Parser) -> Result<Stmt> {
 }
 
 fn parse_block_stmt(p: &mut Parser) -> Result<BlockStmt> {
-    let _ = try!(p.predicate(is!(LBrace)));
+    drop!(p.predicate(is!(LBrace)));
     let ss = try!(p.many(parse_stmt));
-    let _ = try!(p.predicate(is!(RBrace)));
+    drop!(p.predicate(is!(RBrace)));
     Ok(ss)
 }
 
@@ -170,9 +177,9 @@ fn parse_prefix_expr(p: &mut Parser) -> Result<Expr> {
 }
 
 fn parse_paren_expr(p: &mut Parser) -> Result<Expr> {
-    let _ = try!(p.predicate(is!(LParen)));
+    drop!(p.predicate(is!(LParen)));
     let expr = try!(parse_expr(p));
-    let _ = try!(p.predicate(is!(RParen)));
+    drop!(p.predicate(is!(RParen)));
     Ok(expr)
 }
 
