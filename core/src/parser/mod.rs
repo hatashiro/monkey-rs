@@ -158,6 +158,8 @@ fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
                &parse_ident_expr,
                &parse_prefix_expr,
                &parse_paren_expr,
+               &parse_array_expr,
+               &parse_hash_expr,
                &parse_if_expr,
                &parse_fn_expr])
 }
@@ -221,6 +223,25 @@ fn parse_paren_expr(p: &mut Parser) -> Result<Expr> {
     let expr = try!(parse_expr(p));
     drop!(p.predicate(is!(RParen)));
     Ok(expr)
+}
+
+fn parse_array_expr(p: &mut Parser) -> Result<Expr> {
+    drop!(p.predicate(is!(LBracket)));
+    let exprs = try!(parse_comma_separated(p, &parse_expr));
+    drop!(p.predicate(is!(RBracket)));
+    Ok(Expr::Array(exprs))
+}
+
+fn parse_hash_expr(p: &mut Parser) -> Result<Expr> {
+    drop!(p.predicate(is!(LBrace)));
+    let pairs = try!(parse_comma_separated(p, &|p| {
+        let lit = try!(parse_literal(p));
+        drop!(p.predicate(is!(Colon)));
+        let expr = try!(parse_expr(p));
+        Ok((lit, expr))
+    }));
+    drop!(p.predicate(is!(RBrace)));
+    Ok(Expr::Hash(pairs))
 }
 
 fn parse_if_expr(p: &mut Parser) -> Result<Expr> {
