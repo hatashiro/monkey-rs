@@ -43,7 +43,6 @@ fn parse_stmt(p: &mut Parser) -> Result<Stmt> {
                &parse_expr_stmt])
 }
 
-
 fn parse_let_stmt(p: &mut Parser) -> Result<Stmt> {
     drop!(p.predicate(is!(Let)));
     let ident = try!(parse_ident(p));
