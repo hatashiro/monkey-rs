@@ -30,7 +30,11 @@ macro_rules! drop {
 
 fn parse_program(p: &mut Parser) -> Result<Program> {
     let stmts = try!(p.many(parse_stmt));
-    Ok(Program(stmts))
+
+    match p.consume() {
+        Some(token) => Err(p.error(format!("unexpected token {}", token))),
+        None => Ok(Program(stmts)),
+    }
 }
 
 fn parse_stmt(p: &mut Parser) -> Result<Stmt> {
