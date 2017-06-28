@@ -68,6 +68,63 @@ fn parse_block_stmt(p: &mut Parser) -> Result<BlockStmt> {
 }
 
 fn parse_expr(p: &mut Parser) -> Result<Expr> {
+    parse_pratt_expr(p, Prec::Lowest)
+}
+
+fn infix_op(token: &Token) -> (Prec, Option<InfixOp>) {
+    match token {
+        &Token::Eq(..) => (Prec::Equals, Some(InfixOp::Eq(token.clone()))),
+        &Token::NotEq(..) => (Prec::Equals, Some(InfixOp::NotEq(token.clone()))),
+        &Token::LessThan(..) => (Prec::LessGreater, Some(InfixOp::LessThan(token.clone()))),
+        &Token::GreaterThan(..) => (Prec::LessGreater, Some(InfixOp::GreaterThan(token.clone()))),
+        &Token::Plus(..) => (Prec::Sum, Some(InfixOp::Plus(token.clone()))),
+        &Token::Minus(..) => (Prec::Sum, Some(InfixOp::Minus(token.clone()))),
+        &Token::Multiply(..) => (Prec::Product, Some(InfixOp::Multiply(token.clone()))),
+        &Token::Divide(..) => (Prec::Product, Some(InfixOp::Divide(token.clone()))),
+        &Token::LParen(..) => (Prec::Call, None),
+        &Token::LBracket(..) => (Prec::Index, None),
+        _ => (Prec::Lowest, None),
+    }
+}
+
+fn parse_pratt_expr(p: &mut Parser, prec: Prec) -> Result<Expr> {
+    let mut left = try!(parse_atom_expr(p));
+    while let Some((peek_prec, _)) = p.preview().map(infix_op) {
+        if prec >= peek_prec {
+            break;
+        }
+        match prec {
+            Prec::Call => {
+                left = try!(parse_call_expr(p, left));
+            }
+            Prec::Index => {
+                left = try!(parse_index_expr(p, left));
+            }
+            _ => {
+                left = try!(parse_infix_expr(p, left));
+            }
+        }
+    }
+    Ok(left)
+}
+
+fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
+    p.choose(&[&parse_lit_expr])
+}
+
+fn parse_lit_expr(p: &mut Parser) -> Result<Expr> {
+    unimplemented!()
+}
+
+fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
+    unimplemented!()
+}
+
+fn parse_index_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
+    unimplemented!()
+}
+
+fn parse_infix_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
     unimplemented!()
 }
 
