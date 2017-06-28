@@ -396,8 +396,8 @@ fn() {
                            Stmt::Return(Expr::Fn {
                                params: vec![Ident(s("x"), token!(Ident, 3, 14, "x")),
                                             Ident(s("y"), token!(Ident, 3, 17, "y")),
-                                            Ident(s("y"), token!(Ident, 3, 20, "z")),
-                                            Ident(s("y"), token!(Ident, 3, 23, "zz"))],
+                                            Ident(s("z"), token!(Ident, 3, 20, "z")),
+                                            Ident(s("zz"), token!(Ident, 3, 23, "zz"))],
                                body: vec![
                                    Stmt::Return(Expr::Infix(
                                        InfixOp::GreaterThan(token!(GreaterThan, 3, 38, ">")),
