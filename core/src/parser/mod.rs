@@ -109,7 +109,8 @@ fn parse_pratt_expr(p: &mut Parser, prec: Prec) -> Result<Expr> {
 }
 
 fn parse_atom_expr(p: &mut Parser) -> Result<Expr> {
-    p.choose(&[&parse_lit_expr])
+    p.choose(&[&parse_lit_expr,
+               &parse_ident_expr])
 }
 
 fn parse_lit_expr(p: &mut Parser) -> Result<Expr> {
@@ -143,6 +144,11 @@ fn parse_string_literal(p: &mut Parser) -> Result<Literal> {
         .replace("\\\"", "\"");
 
     Ok(Literal::String(val, token))
+}
+
+fn parse_ident_expr(p: &mut Parser) -> Result<Expr> {
+    let ident = try!(parse_ident(p));
+    Ok(Expr::Ident(ident))
 }
 
 fn parse_call_expr(p: &mut Parser, left: Expr) -> Result<Expr> {
