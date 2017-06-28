@@ -30,24 +30,52 @@ pub enum Expr {
     Index { target: Box<Expr>, index: Box<Expr> },
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct Ident(pub String, pub Token);
 
-#[derive(PartialEq, Debug)]
+impl PartialEq for Ident {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+#[derive(Debug)]
 pub enum Literal {
     Int(i64, Token),
     Bool(bool, Token),
     String(String, Token),
 }
 
-#[derive(PartialEq, Debug)]
+impl PartialEq for Literal {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (&Literal::Int(ref i1, _), &Literal::Int(ref i2, _)) => i1 == i2,
+            (&Literal::Bool(ref b1, _), &Literal::Bool(ref b2, _)) => b1 == b2,
+            (&Literal::String(ref s1, _), &Literal::String(ref s2, _)) => s1 == s2,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum PrefixOp {
     Plus(Token),
     Minus(Token),
     Not(Token),
 }
 
-#[derive(PartialEq, Debug)]
+impl PartialEq for PrefixOp {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (&PrefixOp::Plus(_), &PrefixOp::Plus(_)) => true,
+            (&PrefixOp::Minus(_), &PrefixOp::Minus(_)) => true,
+            (&PrefixOp::Not(_), &PrefixOp::Not(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum InfixOp {
     Plus(Token),
     Minus(Token),
@@ -57,6 +85,22 @@ pub enum InfixOp {
     NotEq(Token),
     GreaterThan(Token),
     LessThan(Token),
+}
+
+impl PartialEq for InfixOp {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (&InfixOp::Plus(_), &InfixOp::Plus(_)) => true,
+            (&InfixOp::Minus(_), &InfixOp::Minus(_)) => true,
+            (&InfixOp::Divide(_), &InfixOp::Divide(_)) => true,
+            (&InfixOp::Multiply(_), &InfixOp::Multiply(_)) => true,
+            (&InfixOp::Eq(_), &InfixOp::Eq(_)) => true,
+            (&InfixOp::NotEq(_), &InfixOp::NotEq(_)) => true,
+            (&InfixOp::GreaterThan(_), &InfixOp::GreaterThan(_)) => true,
+            (&InfixOp::LessThan(_), &InfixOp::LessThan(_)) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
