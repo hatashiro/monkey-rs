@@ -1,5 +1,7 @@
 use core::lexer;
 use core::lexer::types::*;
+use core::parser;
+use core::parser::types::*;
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use std::result;
@@ -17,6 +19,7 @@ pub fn main() {
                     Err(ReplError::DoNothing) => continue,
                     Err(ReplError::Exit) => break,
                     Err(ReplError::LexError(err)) => println!("Lexical error: {:?}", err),
+                    Err(ReplError::ParseError(err)) => println!("Parse error: {:?}", err),
                 }
             }
             Err(ReadlineError::Interrupted) => continue,
@@ -33,6 +36,7 @@ enum ReplError {
     Exit,
     DoNothing,
     LexError(LexError),
+    ParseError(ParseError),
 }
 
 fn handle_input(input: String) -> Result<String> {
@@ -43,6 +47,7 @@ fn handle_input(input: String) -> Result<String> {
     }
 
     let tokens = try!(lexer::tokenize(input.chars()).map_err(|err| ReplError::LexError(err)));
+    let ast = try!(parser::parse(tokens).map_err(|err| ReplError::ParseError(err)));
 
-    Ok(format!("{:?}", tokens))
+    Ok(format!("{:?}", ast))
 }
