@@ -1,18 +1,19 @@
 use lexer::types::*;
+use std::hash::{Hash, Hasher};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Program(pub BlockStmt);
 
 pub type BlockStmt = Vec<Stmt>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Stmt {
     Let(Ident, Expr),
     Return(Expr),
     Expr(Expr),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Expr {
     Ident(Ident),
     Lit(Literal),
@@ -30,7 +31,7 @@ pub enum Expr {
     Index { target: Box<Expr>, index: Box<Expr> },
 }
 
-#[derive(Debug)]
+#[derive(Eq, Debug)]
 pub struct Ident(pub String, pub Token);
 
 impl PartialEq for Ident {
@@ -39,7 +40,13 @@ impl PartialEq for Ident {
     }
 }
 
-#[derive(Debug)]
+impl Hash for Ident {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
+#[derive(Eq, Debug)]
 pub enum Literal {
     Int(i64, Token),
     Bool(bool, Token),
@@ -57,7 +64,7 @@ impl PartialEq for Literal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Eq, Debug)]
 pub enum PrefixOp {
     Plus(Token),
     Minus(Token),
@@ -75,7 +82,7 @@ impl PartialEq for PrefixOp {
     }
 }
 
-#[derive(Debug)]
+#[derive(Eq, Debug)]
 pub enum InfixOp {
     Plus(Token),
     Minus(Token),
