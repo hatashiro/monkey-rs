@@ -6,12 +6,10 @@ use evaluator::value::Value;
 
 pub type Result<T> = result::Result<T, EvalError>;
 
-#[derive(Debug)]
-pub struct EvalError {
-    message: String,
-}
+#[derive(PartialEq, Debug)]
+pub struct EvalError(pub String);
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Env {
     var_map: HashMap<Ident, Value>,
     parent: Option<Box<Env>>,

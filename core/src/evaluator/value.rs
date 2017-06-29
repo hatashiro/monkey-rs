@@ -3,7 +3,7 @@ use std::fmt;
 use parser::ast::*;
 use evaluator::types::*;
 
-#[derive(Eq)]
+#[derive(Eq, Debug)]
 pub enum Value {
     Int(i64),
     Bool(bool),
@@ -75,7 +75,7 @@ impl PartialEq for Value {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum Hashable {
     Int(i64),
     Bool(bool),
