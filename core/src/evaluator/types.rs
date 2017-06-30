@@ -7,7 +7,7 @@ use evaluator::value::Value;
 pub type Result<T> = result::Result<T, EvalError>;
 
 #[derive(PartialEq, Debug)]
-pub struct EvalError(pub String);
+pub struct EvalError(pub String, pub (i32, i32));
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Env {

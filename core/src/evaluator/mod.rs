@@ -22,11 +22,11 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    fn fail_with(code: &str, error: &str) {
+    fn fail_with(code: &str, error: &str, pos: (i32, i32)) {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
         let actual = eval(program);
-        assert_eq!(actual, Err(EvalError(String::from(error))));
+        assert_eq!(actual, Err(EvalError(String::from(error), pos)));
     }
 
     #[test]
@@ -53,23 +53,23 @@ mod tests {
         eval_to("!false", Value::Bool(true));
         eval_to("!!true", Value::Bool(true));
         eval_to("!!false", Value::Bool(false));
-        fail_with("!5", "5 is not a bool");
-        fail_with("!1", "1 is not a bool");
-        fail_with("!0", "0 is not a bool");
-        fail_with("!!5", "5 is not a bool");
-        fail_with("!!0", "0 is not a bool");
+        fail_with("!5", "5 is not a bool", (1, 1));
+        fail_with("!1", "1 is not a bool", (1, 1));
+        fail_with("!0", "0 is not a bool", (1, 1));
+        fail_with("!!5", "5 is not a bool", (1, 2));
+        fail_with("!!0", "0 is not a bool", (1, 2));
         // the prefix +
         eval_to("+1", Value::Int(1));
         eval_to("+5", Value::Int(5));
         eval_to("+20", Value::Int(20));
-        fail_with("+true", "true is not a number");
-        fail_with("+false", "false is not a number");
+        fail_with("+true", "true is not a number", (1, 1));
+        fail_with("+false", "false is not a number", (1, 1));
         // the prefix -
         eval_to("-1", Value::Int((-1)));
         eval_to("-5", Value::Int((-5)));
         eval_to("-20", Value::Int((-20)));
-        fail_with("-true", "true is not a number");
-        fail_with("-false", "false is not a number");
+        fail_with("-true", "true is not a number", (1, 1));
+        fail_with("-false", "false is not a number", (1, 1));
     }
 
     #[test]
@@ -106,7 +106,7 @@ mod tests {
     fn conditional_expr() {
         eval_to("if (true) { 10 }", Value::Int(10));
         eval_to("if (false) { 10 }", Value::Null);
-        fail_with("if (1) { 10 }", "1 is not a bool");
+        fail_with("if (1) { 10 }", "1 is not a bool", (1, 5));
         eval_to("if (1 < 2) { 10 }", Value::Int(10));
         eval_to("if (1 > 2) { 10 }", Value::Null);
         eval_to("if (1 < 2) { 10 } else { 20 }", Value::Int(10));
@@ -131,7 +131,6 @@ if (10 > 1) {
         eval_to(RETURN1, Value::Int(10));
     }
 
-
     #[test]
     fn bindings() {
         eval_to("let a = 5; a;", Value::Int(5));
@@ -139,7 +138,7 @@ if (10 > 1) {
         eval_to("let a = 5; let b = a; b;", Value::Int(5));
         eval_to("let a = 5; let b = a; let c = a + b + 5; c;",
                 Value::Int(15));
-        fail_with("foobar", "identifier not found: foobar")
+        fail_with("foobar", "identifier not found: foobar", (1, 1))
     }
 
     static FN1: &str = "
@@ -194,10 +193,11 @@ addTwo(2);
         eval_to("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
                 Value::Int(20));
         eval_to("fn(x) { x; }(5)", Value::Int(5));
-        fail_with("5();", "5 is not a function");
-        fail_with("false();", "false is not a function");
+        fail_with("5();", "5 is not a function", (1, 1));
+        fail_with("false();", "false is not a function", (1, 1));
         fail_with("let add = fn(x, y) { x + y; }; add(1);",
-                  "wrong number of arguments: 2 expected but 1 given");
+                  "wrong number of arguments: 2 expected but 1 given",
+                  (1, 32));
         eval_to(FN1, Value::Int(10));
         eval_to(FN2, Value::Int(6));
         eval_to(FN3, Value::Int(10));
