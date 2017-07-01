@@ -210,6 +210,72 @@ addTwo(2);
         eval_to("let x = fn () { a; }; let a = 10; x();", Value::Int(10));
     }
 
+    #[test]
+    fn string() {
+        eval_to("\"foobar\"", Value::String(String::from("foobar")));
+        eval_to("\"foo bar\"", Value::String(String::from("foo bar")));
+        eval_to("\"foo\\nbar\"", Value::String(String::from("foo\nbar")));
+        eval_to("\"foo\\tbar\"", Value::String(String::from("foo\tbar")));
+        eval_to("\"foo\\\"bar\"", Value::String(String::from("foo\"bar")));
+        eval_to("\"foo\" + \"bar\"", Value::String(String::from("foobar")));
+        eval_to("\"foo\" + \" \" + \"bar\"",
+                Value::String(String::from("foo bar")));
+        fail_with("\"foo\" - \"bar\"", "\"foo\" is not a number", (1, 1));
+    }
+
+    #[test]
+    fn array() {
+        eval_to("[1, 2, 3, 4]",
+                Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3), Value::Int(4)]));
+        eval_to("let double = fn(x) { x * 2 }; [1, double(2), 3 * 3, 4 - 3]",
+                Value::Array(vec![Value::Int(1), Value::Int(4), Value::Int(9), Value::Int(1)]));
+        eval_to("[1, 2, 3][0]", Value::Int(1));
+        eval_to("[1, 2, 3][1]", Value::Int(2));
+        eval_to("[1, 2, 3][2]", Value::Int(3));
+        eval_to("let i = 0; [1][i];", Value::Int(1));
+        eval_to("[1, 2, 3][1 + 1];", Value::Int(3));
+        eval_to("let myArray = [1, 2, 3]; myArray[2];", Value::Int(3));
+        eval_to("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+                Value::Int(6));
+        eval_to("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];",
+                Value::Int(2));
+        eval_to("[1, 2, 3][3]", Value::Null);
+        eval_to("[1, 2, 3][-1]", Value::Null);
+    }
+
+    #[test]
+    fn built_in_fn() {
+        // len
+        eval_to("len(\"hello world!\")", Value::Int(12));
+        eval_to("len(\"\")", Value::Int(0));
+        eval_to("len(\"Hey Bob, how ya doin?\")", Value::Int(21));
+        fail_with("len(3)",
+                  "invalid arguments for [built-in function: len]: [3]",
+                  (1, 1));
+        fail_with("len(\"hello\", \"world\")",
+                  "wrong number of arguments: 1 expected but 2 given",
+                  (1, 1));
+        eval_to("len([])", Value::Int(0));
+        eval_to("len([1, 2, 3, 4])", Value::Int(4));
+        // head
+        eval_to("head([1])", Value::Int(1));
+        eval_to("head([1, 2, 3, 4])", Value::Int(1));
+        fail_with("head([])",
+                  "invalid arguments for [built-in function: head]: empty array",
+                  (1, 1));
+        // tail
+        eval_to("tail([1])", Value::Array(vec![]));
+        eval_to("tail([1, 2, 3, 4])",
+                Value::Array(vec![Value::Int(2), Value::Int(3), Value::Int(4)]));
+        fail_with("tail([])",
+                  "invalid arguments for [built-in function: tail]: empty array",
+                  (1, 1));
+        // cons
+        eval_to("cons(1, [])", Value::Array(vec![Value::Int(1)]));
+        eval_to("cons(1, [2, 3, 4])",
+                Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3), Value::Int(4)]));
+    }
+
     static MAP_DECL: &str = "
 let map = fn(f, arr) {
   if (len(arr) == 0) {
@@ -232,6 +298,16 @@ let reduce = fn(f, init, arr) {
 };
 ";
 
+    #[test]
+    fn map_reduce() {
+        eval_to(&(MAP_DECL.to_string() +
+                  "let double = fn(x) { x * 2 }; map(double, [1, 2, 3, 4])"),
+                Value::Array(vec![Value::Int(2), Value::Int(4), Value::Int(6), Value::Int(8)]));
+        eval_to(&(REDUCE_DECL.to_string() +
+                  "let add = fn(x, y) { x + y }; reduce(add, 0, [1, 2, 3, 4, 5])"),
+                Value::Int(15));
+    }
+
     static HASH1: &str = "
 let double = fn(x) {
   x * 2;
@@ -246,4 +322,18 @@ let h = {
   false: \"hello\" == \"world\"
 };
 ";
+
+    #[test]
+    fn hash() {
+        eval_to(&(HASH1.to_string() + "h[\"one\"]"), Value::Int(1));
+        eval_to(&(HASH1.to_string() + "let s = \"two\"; h[s]"),
+                Value::Int(2));
+        eval_to(&(HASH1.to_string() + "h[3]"), Value::Int(3));
+        eval_to(&(HASH1.to_string() + "h[2 + 2]"), Value::Int(4));
+        eval_to(&(HASH1.to_string() + "h[true]"), Value::Bool(true));
+        eval_to(&(HASH1.to_string() + "h[5 < 1]"), Value::Bool(false));
+        eval_to(&(HASH1.to_string() + "h[100]"), Value::Null);
+        fail_with(&(HASH1.to_string() + "h[[]]"), "[] is not hashable", (1, 1));
+        fail_with("3[true];", "unexpected index target: 3", (1, 1));
+    }
 }
