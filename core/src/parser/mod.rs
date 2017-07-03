@@ -4,6 +4,7 @@ pub mod types;
 use self::ast::*;
 use self::types::*;
 use common::combinator::Parser as P;
+use common::util::escape;
 use lexer::types::Token;
 
 pub fn parse(input: Vec<Token>) -> Result<Program> {
@@ -190,14 +191,7 @@ fn parse_bool_literal(p: &mut Parser) -> Result<Literal> {
 
 fn parse_string_literal(p: &mut Parser) -> Result<Literal> {
     let token = try!(p.predicate(is!(StringLiteral)));
-
-    let val = token.literal().trim_matches('"')
-        .replace("\\n", "\n")
-        .replace("\\t", "\t")
-        .replace("\\\\", "\\")
-        .replace("\\\"", "\"");
-
-    Ok(Literal::String(val, token))
+    Ok(Literal::String(escape(token.literal()), token))
 }
 
 fn parse_ident_expr(p: &mut Parser) -> Result<Expr> {

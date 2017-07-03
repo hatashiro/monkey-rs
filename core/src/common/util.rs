@@ -10,6 +10,22 @@ pub fn is_letter_or_digit(c: &char) -> bool {
     is_letter(c) || is_digit(c)
 }
 
+pub fn escape(x: &String) -> String {
+    x.trim_matches('"')
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\\\", "\\")
+        .replace("\\\"", "\"")
+}
+
+pub fn unescape(x: &String) -> String {
+    format!("\"{}\"",
+            x.replace("\"", "\\\"")
+                .replace("\\", "\\\\")
+                .replace("\t", "\\t")
+                .replace("\n", "\\n"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
