@@ -20,12 +20,13 @@ fn eval_block_stmt(env: &mut Env, block: BlockStmt) -> Result<Value> {
 
     for stmt in block {
         res = try!(eval_stmt(env, stmt));
+        match res.as_ref() {
+            &Value::Return(ref v) => return Ok(v.clone()),
+            res => continue,
+        }
     }
 
-    match res.as_ref() {
-        &Value::Return(ref v) => Ok(v.clone()),
-        _ => Ok(res.clone()),
-    }
+    return Ok(res);
 }
 
 fn eval_stmt(env: &mut Env, stmt: Stmt) -> Result<Value> {
