@@ -257,11 +257,7 @@ fn eval_call(env: Rc<RefCell<Env>>, func: &Expr, args: &Vec<Expr>) -> Result<Val
                 Ok(unwrap_return!(try!(eval_block_stmt(call_env, body))))
             }
         }
-        Value::BuiltInFn {
-            ref name,
-            num_params,
-            func,
-        } => {
+        Value::BuiltInFn { num_params, func, .. } => {
             if args.len() != num_params {
                 throw(format!("wrong number of arguments: {} expected, {} provided",
                               num_params,

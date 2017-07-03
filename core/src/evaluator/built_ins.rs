@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::rc::Rc;
 use evaluator::types::*;
 use evaluator::value::*;
@@ -27,17 +25,41 @@ fn built_in_len(args: Vec<((i32, i32), Rc<Value>)>) -> Result<Value> {
 fn built_in_head(args: Vec<((i32, i32), Rc<Value>)>) -> Result<Value> {
     let &(pos, ref x) = args.get(0).unwrap();
     match x.as_ref() {
-        &Value::Array(ref arr) => Ok(arr[0].clone()),
+        &Value::Array(ref arr) => {
+            match arr.get(0) {
+                Some(v) => Ok(v.clone()),
+                None => throw(String::from("invalid arguments: empty array"), pos),
+            }
+        }
         _ => throw(format!("{} is not an array", x), pos),
     }
 }
 
 fn built_in_tail(args: Vec<((i32, i32), Rc<Value>)>) -> Result<Value> {
-    unimplemented!()
+    let &(pos, ref x) = args.get(0).unwrap();
+    match x.as_ref() {
+        &Value::Array(ref arr) => {
+            if arr.is_empty() {
+                throw(String::from("invalid arguments: empty array"), pos)
+            } else {
+                ret(Value::Array(arr[1..].to_vec()))
+            }
+        }
+        _ => throw(format!("{} is not an array", x), pos),
+    }
 }
 
 fn built_in_cons(args: Vec<((i32, i32), Rc<Value>)>) -> Result<Value> {
-    unimplemented!()
+    let &(_, ref x) = args.get(0).unwrap();
+    let &(pos_xs, ref xs) = args.get(1).unwrap();
+    match xs.as_ref() {
+        &Value::Array(ref arr) => {
+            let mut res = vec![x.clone()];
+            res.extend(arr.iter().cloned());
+            ret(Value::Array(res))
+        }
+        _ => throw(format!("{} is not an array", xs), pos_xs),
+    }
 }
 
 fn built_in_print(args: Vec<((i32, i32), Rc<Value>)>) -> Result<Value> {
