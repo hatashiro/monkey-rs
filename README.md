@@ -23,15 +23,24 @@ may not be so difficult as Rust adopted many language concepts from Haskell,
 such as pattern match, error handling, and trait (known as type class in
 Haskell).
 
-Also, being different from the original interpreter, this time it will actually
-produce a [WASM](http://webassembly.org/) bytecode, which I'm also interested
-recently.
-
 Let me see if I can do it well :v:
 
 ## Instruction
 
-:construction:
+Build, test and install:
+
+```
+cargo build --all
+cargo test --all
+cargo install
+```
+
+Run REPL and scripts:
+
+```
+monkey repl
+monkey run examples/map-reduce.mk
+```
 
 ## License
 
