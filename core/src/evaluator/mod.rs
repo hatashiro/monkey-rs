@@ -39,14 +39,65 @@ fn eval_stmt(env: &mut Env, stmt: Stmt) -> Result<Value> {
     }
 }
 
-fn eval_expr(env: &mut Env, expr: Expr) -> Result<Value> {
-    unimplemented!()
-}
-
 fn eval_let_stmt(env: &mut Env, ident: Ident, expr: Expr) -> Result<Value> {
     let val = try!(eval_expr(env, expr));
     env.insert_var(ident, val.clone());
     Ok(val)
+}
+
+fn eval_expr(env: &mut Env, expr: Expr) -> Result<Value> {
+    match expr {
+        Expr::Ident(i) => eval_ident(env, i),
+        Expr::Lit(l) => eval_literal(l),
+        Expr::Prefix(p, expr) => eval_prefix(env, p, *expr),
+        Expr::Infix(i, left, right) => eval_infix(env, i, *left, *right),
+        Expr::If { cond, con, alt, .. } => eval_if(env, *cond, con, alt),
+        Expr::Fn { params, body, .. } => eval_fn(params, body),
+        Expr::Call { func, args } => eval_call(env, *func, args),
+        Expr::Array(arr, ..) => eval_array(env, arr),
+        Expr::Hash(hash, ..) => eval_hash(env, hash),
+        Expr::Index { target, index } => eval_index(env, *target, *index),
+    }
+}
+
+fn eval_ident(env: &mut Env, ident: Ident) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_literal(lit: Literal) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_prefix(env: &mut Env, prefix: PrefixOp, expr: Expr) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_infix(env: &mut Env, infix: InfixOp, left: Expr, right: Expr) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_if(env: &mut Env, cond: Expr, con: BlockStmt, alt: Option<BlockStmt>) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_fn(params: Vec<Ident>, body: BlockStmt) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_call(env: &mut Env, func: Expr, args: Vec<Expr>) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_array(env: &mut Env, arr: Vec<Expr>) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_hash(env: &mut Env, hash: Vec<(Literal, Expr)>) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_index(env: &mut Env, target: Expr, index: Expr) -> Result<Value> {
+    unimplemented!()
 }
 
 #[cfg(test)]
