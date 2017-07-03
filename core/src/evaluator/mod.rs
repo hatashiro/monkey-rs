@@ -5,25 +5,44 @@ use self::value::*;
 use self::types::*;
 use parser::ast::*;
 
-pub fn eval(program: Program) -> Result<Box<Value>> {
+pub fn eval(program: Program) -> Result<Value> {
     let mut env = Env::new();
     eval_program(&mut env, program)
 }
 
-fn eval_program(env: &mut Env, program: Program) -> Result<Box<Value>> {
+fn eval_program(env: &mut Env, program: Program) -> Result<Value> {
+    eval_block_stmt(env, program.0)
+}
+
+fn eval_block_stmt(env: &mut Env, block: BlockStmt) -> Result<Value> {
     let mut res = Value::Null;
 
-    for stmt in program.0 {
+    for stmt in block {
         res = try!(eval_stmt(env, stmt));
     }
 
     match res {
-        Value::Return(v) => Ok(v),
-        v => Ok(Box::new(v)),
+        Value::Return(v) => Ok(*v),
+        v => Ok(v),
     }
 }
 
 fn eval_stmt(env: &mut Env, stmt: Stmt) -> Result<Value> {
+    match stmt {
+        Stmt::Expr(expr) => eval_expr(env, expr),
+        Stmt::Return(expr) => {
+            let val = try!(eval_expr(env, expr));
+            Ok(Value::Return(Box::new(val)))
+        }
+        Stmt::Let(ident, expr) => eval_let_stmt(env, ident, expr),
+    }
+}
+
+fn eval_expr(env: &mut Env, expr: Expr) -> Result<Value> {
+    unimplemented!()
+}
+
+fn eval_let_stmt(env: &mut Env, ident: Ident, expr: Expr) -> Result<Value> {
     unimplemented!()
 }
 
@@ -37,7 +56,7 @@ mod tests {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
         let actual = eval(program).unwrap();
-        assert_eq!(actual, Box::new(expected));
+        assert_eq!(actual, expected);
     }
 
     fn fail_with(code: &str, error: &str, pos: (i32, i32)) {
