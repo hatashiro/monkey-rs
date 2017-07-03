@@ -11,11 +11,6 @@ use self::value::*;
 use self::types::*;
 use parser::ast::*;
 
-pub fn eval(program: &Program) -> Result<Value> {
-    let env = Rc::new(RefCell::new(built_ins::init()));
-    eval_program(env, program)
-}
-
 macro_rules! unwrap_return {
     ($val:expr) => {{
         let val = $val;
@@ -27,7 +22,7 @@ macro_rules! unwrap_return {
     }}
 }
 
-fn eval_program(env: Rc<RefCell<Env>>, program: &Program) -> Result<Value> {
+pub fn eval(env: Rc<RefCell<Env>>, program: &Program) -> Result<Value> {
     let res = try!(eval_block_stmt(env, &program.0));
     Ok(unwrap_return!(res))
 }
@@ -332,15 +327,17 @@ mod tests {
     fn eval_to(code: &str, expected: Value) {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
-        let actual = eval(&program).unwrap();
+        let env = Rc::new(RefCell::new(built_ins::init()));
+        let actual = eval(env.clone(), &program).unwrap();
         assert_eq!(actual, Rc::new(expected));
     }
 
     fn fail_with(code: &str, error: &str, pos: (i32, i32)) {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
-        let actual = eval(&program);
-        assert_eq!(actual, Err(EvalError(String::from(error), pos)));
+        let env = Rc::new(RefCell::new(built_ins::init()));
+        let actual_error = eval(env.clone(), &program);
+        assert_eq!(actual_error, Err(EvalError(String::from(error), pos)));
     }
 
     #[test]

@@ -91,8 +91,8 @@ impl fmt::Display for Token {
 
 #[derive(Debug)]
 pub struct LexError {
-    message: String,
-    pos: (i32, i32),
+    pub message: String,
+    pub pos: (i32, i32),
     token: char,
 }
 

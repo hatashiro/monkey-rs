@@ -6,8 +6,8 @@ pub type Result<T> = result::Result<T, ParseError>;
 
 #[derive(Debug)]
 pub struct ParseError {
-    message: String,
-    token: Option<Token>,
+    pub message: String,
+    pub token: Option<Token>,
 }
 
 pub struct Parser {
