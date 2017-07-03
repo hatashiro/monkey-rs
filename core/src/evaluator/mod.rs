@@ -61,11 +61,18 @@ fn eval_expr(env: &mut Env, expr: Expr) -> Result<Value> {
 }
 
 fn eval_ident(env: &mut Env, ident: Ident) -> Result<Value> {
-    unimplemented!()
+    match env.get_var(&ident) {
+        Some(val) => Ok(val),
+        None => throw(format!("identifier not found: {}", ident.0), ident.pos()),
+    }
 }
 
 fn eval_literal(lit: Literal) -> Result<Value> {
-    unimplemented!()
+    match lit {
+        Literal::Bool(b, ..) => ret(Value::Bool(b)),
+        Literal::Int(i, ..) => ret(Value::Int(i)),
+        Literal::String(s, ..) => ret(Value::String(s)),
+    }
 }
 
 fn eval_prefix(env: &mut Env, prefix: PrefixOp, expr: Expr) -> Result<Value> {
@@ -129,12 +136,14 @@ mod tests {
     fn simple_int() {
         eval_to("5", Value::Int(5));
         eval_to("10", Value::Int(10));
+        eval_to("let a = 20; a", Value::Int(20));
     }
 
     #[test]
     fn simple_bool() {
         eval_to("true", Value::Bool(true));
         eval_to("false", Value::Bool(false));
+        eval_to("let a = true; a", Value::Bool(true));
     }
 
     #[test]

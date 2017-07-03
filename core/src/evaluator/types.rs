@@ -14,6 +14,10 @@ pub fn ret<T>(x: T) -> Result<T> {
 #[derive(PartialEq, Debug)]
 pub struct EvalError(pub String, pub (i32, i32));
 
+pub fn throw<T>(message: String, pos: (i32, i32)) -> Result<T> {
+    Err(EvalError(message, pos))
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct Env {
     var_map: HashMap<Ident, Rc<Value>>,
