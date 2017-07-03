@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 use common::util::unescape;
 use parser::ast::*;
 use evaluator::types::*;
@@ -14,14 +15,14 @@ pub enum Value {
     Fn {
         params: Vec<Ident>,
         body: BlockStmt,
-        env: Box<Env>,
+        env: Rc<Env>,
     },
     BuiltInFn {
         name: String,
         num_params: i32,
         func: BuiltInFn,
     },
-    Return(Box<Value>),
+    Return(Rc<Value>),
     Null,
 }
 
@@ -135,7 +136,7 @@ mod tests {
                            Value::Fn {
                                params: vec![],
                                body: vec![],
-                               env: Box::new(Env::new()),
+                               env: Rc::new(Env::new()),
                            }),
                    "[function]");
         assert_eq!(format!("{}",
@@ -145,7 +146,7 @@ mod tests {
                                func: dummy,
                            }),
                    "[built-in function: hi]");
-        assert_eq!(format!("{}", Value::Return(Box::new(Value::Int(35)))), "35");
+        assert_eq!(format!("{}", Value::Return(Rc::from(Value::Int(35)))), "35");
         assert_eq!(format!("{}", Value::Null), "null");
     }
 }

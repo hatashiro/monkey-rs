@@ -1,6 +1,7 @@
 pub mod value;
 pub mod types;
 
+use std::rc::Rc;
 use self::value::*;
 use self::types::*;
 use parser::ast::*;
@@ -15,15 +16,15 @@ fn eval_program(env: &mut Env, program: Program) -> Result<Value> {
 }
 
 fn eval_block_stmt(env: &mut Env, block: BlockStmt) -> Result<Value> {
-    let mut res = Value::Null;
+    let mut res = Rc::new(Value::Null);
 
     for stmt in block {
         res = try!(eval_stmt(env, stmt));
     }
 
-    match res {
-        Value::Return(v) => Ok(*v),
-        v => Ok(v),
+    match res.as_ref() {
+        &Value::Return(ref v) => Ok(v.clone()),
+        _ => Ok(res.clone()),
     }
 }
 
@@ -32,7 +33,7 @@ fn eval_stmt(env: &mut Env, stmt: Stmt) -> Result<Value> {
         Stmt::Expr(expr) => eval_expr(env, expr),
         Stmt::Return(expr) => {
             let val = try!(eval_expr(env, expr));
-            Ok(Value::Return(Box::new(val)))
+            ret(Value::Return(val))
         }
         Stmt::Let(ident, expr) => eval_let_stmt(env, ident, expr),
     }
@@ -43,7 +44,9 @@ fn eval_expr(env: &mut Env, expr: Expr) -> Result<Value> {
 }
 
 fn eval_let_stmt(env: &mut Env, ident: Ident, expr: Expr) -> Result<Value> {
-    unimplemented!()
+    let val = try!(eval_expr(env, expr));
+    env.insert_var(ident, val.clone());
+    Ok(val)
 }
 
 #[cfg(test)]
@@ -56,7 +59,7 @@ mod tests {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
         let actual = eval(program).unwrap();
-        assert_eq!(actual, expected);
+        assert_eq!(actual, Rc::new(expected));
     }
 
     fn fail_with(code: &str, error: &str, pos: (i32, i32)) {
