@@ -187,7 +187,15 @@ fn eval_infix_less_than(env: &mut Env, left: Expr, right: Expr) -> Result<Value>
 }
 
 fn eval_if(env: &mut Env, cond: Expr, con: BlockStmt, alt: Option<BlockStmt>) -> Result<Value> {
-    unimplemented!()
+    let cond_val = force_eval!(env, cond, Bool, "a bool");
+
+    if cond_val {
+        eval_block_stmt(env, con)
+    } else if let Some(some_alt) = alt {
+        eval_block_stmt(env, some_alt)
+    } else {
+        ret(Value::Null)
+    }
 }
 
 fn eval_fn(params: Vec<Ident>, body: BlockStmt) -> Result<Value> {
