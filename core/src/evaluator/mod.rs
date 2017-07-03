@@ -5,8 +5,26 @@ use self::value::*;
 use self::types::*;
 use parser::ast::*;
 
-pub fn eval(program: Program) -> Result<Value> {
-    Ok(Value::Null)
+pub fn eval(program: Program) -> Result<Box<Value>> {
+    let mut env = Env::new();
+    eval_program(&mut env, program)
+}
+
+fn eval_program(env: &mut Env, program: Program) -> Result<Box<Value>> {
+    let mut res = Value::Null;
+
+    for stmt in program.0 {
+        res = try!(eval_stmt(env, stmt));
+    }
+
+    match res {
+        Value::Return(v) => Ok(v),
+        v => Ok(Box::new(v)),
+    }
+}
+
+fn eval_stmt(env: &mut Env, stmt: Stmt) -> Result<Value> {
+    unimplemented!()
 }
 
 #[cfg(test)]
@@ -19,7 +37,7 @@ mod tests {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
         let actual = eval(program).unwrap();
-        assert_eq!(actual, expected);
+        assert_eq!(actual, Box::new(expected));
     }
 
     fn fail_with(code: &str, error: &str, pos: (i32, i32)) {
