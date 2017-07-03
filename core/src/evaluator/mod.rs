@@ -76,12 +76,109 @@ fn eval_literal(lit: Literal) -> Result<Value> {
     }
 }
 
+macro_rules! force_eval {
+    ($env:expr, $expr:expr, $type:ident, $not_found_name:expr) => {{
+        let pos = $expr.pos();
+        let result = try!(eval_expr($env, $expr));
+        match result.as_ref() {
+            &Value::$type(ref v) => v.clone(),
+            _ => return throw(format!("{} is not {}", &result, $not_found_name), pos),
+        }
+    }}
+}
+
 fn eval_prefix(env: &mut Env, prefix: PrefixOp, expr: Expr) -> Result<Value> {
-    unimplemented!()
+    match prefix {
+        PrefixOp::Not(..) => eval_prefix_not(env, expr),
+        PrefixOp::Plus(..) => eval_prefix_plus(env, expr),
+        PrefixOp::Minus(..) => eval_prefix_minus(env, expr),
+    }
+}
+
+fn eval_prefix_not(env: &mut Env, expr: Expr) -> Result<Value> {
+    let val = force_eval!(env, expr, Bool, "a bool");
+    ret(Value::Bool(!val))
+}
+
+fn eval_prefix_plus(env: &mut Env, expr: Expr) -> Result<Value> {
+    let val = force_eval!(env, expr, Int, "an integer");
+    ret(Value::Int(val))
+}
+
+fn eval_prefix_minus(env: &mut Env, expr: Expr) -> Result<Value> {
+    let val = force_eval!(env, expr, Int, "an integer");
+    ret(Value::Int(-val))
 }
 
 fn eval_infix(env: &mut Env, infix: InfixOp, left: Expr, right: Expr) -> Result<Value> {
-    unimplemented!()
+    match infix {
+        InfixOp::Plus(..) => eval_infix_plus(env, left, right),
+        InfixOp::Minus(..) => eval_infix_minus(env, left, right),
+        InfixOp::Divide(..) => eval_infix_divide(env, left, right),
+        InfixOp::Multiply(..) => eval_infix_multiply(env, left, right),
+        InfixOp::Eq(..) => eval_infix_eq(env, left, right),
+        InfixOp::NotEq(..) => eval_infix_not_eq(env, left, right),
+        InfixOp::GreaterThan(..) => eval_infix_greater_than(env, left, right),
+        InfixOp::LessThan(..) => eval_infix_less_than(env, left, right),
+    }
+}
+
+fn eval_infix_plus(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_pos = left.pos();
+    let l_val = try!(eval_expr(env, left));
+    match l_val.as_ref() {
+        &Value::Int(i) => {
+            let r_val = force_eval!(env, right, Int, "an integer");
+            ret(Value::Int(i + r_val))
+        }
+        &Value::String(ref s) => {
+            let r_val = force_eval!(env, right, String, "a string");
+            ret(Value::String(s.clone() + &r_val))
+        }
+        _ => throw(format!("{} is not an integer or string", &l_val), l_pos),
+    }
+}
+
+fn eval_infix_minus(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = force_eval!(env, left, Int, "an integer");
+    let r_val = force_eval!(env, right, Int, "an integer");
+    ret(Value::Int(l_val - r_val))
+}
+
+fn eval_infix_divide(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = force_eval!(env, left, Int, "an integer");
+    let r_val = force_eval!(env, right, Int, "an integer");
+    ret(Value::Int(l_val / r_val))
+}
+
+fn eval_infix_multiply(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = force_eval!(env, left, Int, "an integer");
+    let r_val = force_eval!(env, right, Int, "an integer");
+    ret(Value::Int(l_val * r_val))
+}
+
+fn eval_infix_eq(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = try!(eval_expr(env, left));
+    let r_val = try!(eval_expr(env, right));
+    ret(Value::Bool(l_val == r_val))
+}
+
+fn eval_infix_not_eq(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = try!(eval_expr(env, left));
+    let r_val = try!(eval_expr(env, right));
+    ret(Value::Bool(l_val != r_val))
+}
+
+fn eval_infix_greater_than(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = force_eval!(env, left, Int, "an integer");
+    let r_val = force_eval!(env, right, Int, "an integer");
+    ret(Value::Bool(l_val > r_val))
+}
+
+fn eval_infix_less_than(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+    let l_val = force_eval!(env, left, Int, "an integer");
+    let r_val = force_eval!(env, right, Int, "an integer");
+    ret(Value::Bool(l_val < r_val))
 }
 
 fn eval_if(env: &mut Env, cond: Expr, con: BlockStmt, alt: Option<BlockStmt>) -> Result<Value> {
@@ -154,23 +251,23 @@ mod tests {
         eval_to("!false", Value::Bool(true));
         eval_to("!!true", Value::Bool(true));
         eval_to("!!false", Value::Bool(false));
-        fail_with("!5", "5 is not a bool", (1, 1));
-        fail_with("!1", "1 is not a bool", (1, 1));
-        fail_with("!0", "0 is not a bool", (1, 1));
-        fail_with("!!5", "5 is not a bool", (1, 2));
-        fail_with("!!0", "0 is not a bool", (1, 2));
+        fail_with("!5", "5 is not a bool", (1, 2));
+        fail_with("!1", "1 is not a bool", (1, 2));
+        fail_with("!0", "0 is not a bool", (1, 2));
+        fail_with("!!5", "5 is not a bool", (1, 3));
+        fail_with("!!0", "0 is not a bool", (1, 3));
         // the prefix +
         eval_to("+1", Value::Int(1));
         eval_to("+5", Value::Int(5));
         eval_to("+20", Value::Int(20));
-        fail_with("+true", "true is not a number", (1, 1));
-        fail_with("+false", "false is not a number", (1, 1));
+        fail_with("+true", "true is not an integer", (1, 2));
+        fail_with("+false", "false is not an integer", (1, 2));
         // the prefix -
         eval_to("-1", Value::Int((-1)));
         eval_to("-5", Value::Int((-5)));
         eval_to("-20", Value::Int((-20)));
-        fail_with("-true", "true is not a number", (1, 1));
-        fail_with("-false", "false is not a number", (1, 1));
+        fail_with("-true", "true is not an integer", (1, 2));
+        fail_with("-false", "false is not an integer", (1, 2));
     }
 
     #[test]
@@ -322,7 +419,7 @@ addTwo(2);
         eval_to("\"foo\" + \"bar\"", Value::String(String::from("foobar")));
         eval_to("\"foo\" + \" \" + \"bar\"",
                 Value::String(String::from("foo bar")));
-        fail_with("\"foo\" - \"bar\"", "\"foo\" is not a number", (1, 1));
+        fail_with("\"foo\" - \"bar\"", "\"foo\" is not an integer", (1, 1));
     }
 
     #[test]
