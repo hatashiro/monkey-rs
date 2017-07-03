@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::cell::RefCell;
 use std::rc::Rc;
 use common::util::unescape;
 use parser::ast::*;
@@ -15,7 +16,7 @@ pub enum Value {
     Fn {
         params: Vec<Ident>,
         body: BlockStmt,
-        env: Rc<Env>,
+        env: Rc<RefCell<Env>>,
     },
     BuiltInFn {
         name: String,
@@ -136,7 +137,7 @@ mod tests {
                            Value::Fn {
                                params: vec![],
                                body: vec![],
-                               env: Rc::new(Env::new()),
+                               env: Rc::new(RefCell::new(Env::new())),
                            }),
                    "[function]");
         assert_eq!(format!("{}",

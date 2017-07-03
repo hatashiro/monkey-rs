@@ -10,14 +10,14 @@ pub struct Program(pub BlockStmt);
 
 pub type BlockStmt = Vec<Stmt>;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Stmt {
     Let(Ident, Expr),
     Return(Expr),
     Expr(Expr),
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Expr {
     Ident(Ident),
     Lit(Literal),
@@ -57,7 +57,7 @@ impl Positioned for Expr {
     }
 }
 
-#[derive(Eq, Debug)]
+#[derive(Eq, Clone, Debug)]
 pub struct Ident(pub String, pub Token);
 
 impl PartialEq for Ident {
@@ -78,7 +78,7 @@ impl Positioned for Ident {
     }
 }
 
-#[derive(Eq, Debug)]
+#[derive(Eq, Clone, Debug)]
 pub enum Literal {
     Int(i64, Token),
     Bool(bool, Token),
@@ -106,7 +106,7 @@ impl Positioned for Literal {
     }
 }
 
-#[derive(Eq, Debug)]
+#[derive(Eq, Clone, Debug)]
 pub enum PrefixOp {
     Plus(Token),
     Minus(Token),
@@ -134,7 +134,7 @@ impl Positioned for PrefixOp {
     }
 }
 
-#[derive(Eq, Debug)]
+#[derive(Eq, Clone, Debug)]
 pub enum InfixOp {
     Plus(Token),
     Minus(Token),

@@ -1,83 +1,103 @@
 pub mod value;
 pub mod types;
 
+use std::cell::RefCell;
 use std::rc::Rc;
 use self::value::*;
 use self::types::*;
 use parser::ast::*;
 
-pub fn eval(program: Program) -> Result<Value> {
-    let mut env = Env::new();
-    eval_program(&mut env, program)
+pub fn eval(program: &Program) -> Result<Value> {
+    let env = Rc::new(RefCell::new(Env::new()));
+    eval_program(env, program)
 }
 
-fn eval_program(env: &mut Env, program: Program) -> Result<Value> {
-    let res = try!(eval_block_stmt(env, program.0));
-    match res.as_ref() {
-        &Value::Return(ref v) => return Ok(v.clone()),
-        _ => {}
-    }
-    Ok(res)
+macro_rules! unwrap_return {
+    ($val:expr) => {{
+        let val = $val;
+        match val.as_ref() {
+            &Value::Return(ref v) => return Ok(v.clone()),
+            _ => {},
+        }
+        val
+    }}
 }
 
-fn eval_block_stmt(env: &mut Env, block: BlockStmt) -> Result<Value> {
+fn eval_program(env: Rc<RefCell<Env>>, program: &Program) -> Result<Value> {
+    let res = try!(eval_block_stmt(env, &program.0));
+    Ok(unwrap_return!(res))
+}
+
+fn eval_block_stmt(env: Rc<RefCell<Env>>, block: &BlockStmt) -> Result<Value> {
     let mut res = Rc::new(Value::Null);
 
     for stmt in block {
-        res = try!(eval_stmt(env, stmt));
+        res = try!(eval_stmt(env.clone(), stmt));
         match res.as_ref() {
             &Value::Return(..) => break,
-            res => continue,
+            _ => continue,
         }
     }
 
     return Ok(res);
 }
 
-fn eval_stmt(env: &mut Env, stmt: Stmt) -> Result<Value> {
+fn eval_stmt(env: Rc<RefCell<Env>>, stmt: &Stmt) -> Result<Value> {
     match stmt {
-        Stmt::Expr(expr) => eval_expr(env, expr),
-        Stmt::Return(expr) => {
+        &Stmt::Expr(ref expr) => eval_expr(env, expr),
+        &Stmt::Return(ref expr) => {
             let val = try!(eval_expr(env, expr));
             ret(Value::Return(val))
         }
-        Stmt::Let(ident, expr) => eval_let_stmt(env, ident, expr),
+        &Stmt::Let(ref ident, ref expr) => eval_let_stmt(env, ident, expr),
     }
 }
 
-fn eval_let_stmt(env: &mut Env, ident: Ident, expr: Expr) -> Result<Value> {
-    let val = try!(eval_expr(env, expr));
-    env.insert_var(ident, val.clone());
+fn eval_let_stmt(env: Rc<RefCell<Env>>, ident: &Ident, expr: &Expr) -> Result<Value> {
+    let val = try!(eval_expr(env.clone(), &expr));
+    env.borrow_mut().insert_var(ident.clone(), val.clone());
     Ok(val)
 }
 
-fn eval_expr(env: &mut Env, expr: Expr) -> Result<Value> {
+fn eval_expr(env: Rc<RefCell<Env>>, expr: &Expr) -> Result<Value> {
     match expr {
-        Expr::Ident(i) => eval_ident(env, i),
-        Expr::Lit(l) => eval_literal(l),
-        Expr::Prefix(p, expr) => eval_prefix(env, p, *expr),
-        Expr::Infix(i, left, right) => eval_infix(env, i, *left, *right),
-        Expr::If { cond, con, alt, .. } => eval_if(env, *cond, con, alt),
-        Expr::Fn { params, body, .. } => eval_fn(params, body),
-        Expr::Call { func, args } => eval_call(env, *func, args),
-        Expr::Array(arr, ..) => eval_array(env, arr),
-        Expr::Hash(hash, ..) => eval_hash(env, hash),
-        Expr::Index { target, index } => eval_index(env, *target, *index),
+        &Expr::Ident(ref i) => eval_ident(env, i),
+        &Expr::Lit(ref l) => eval_literal(l),
+        &Expr::Prefix(ref p, ref expr) => eval_prefix(env, p, expr),
+        &Expr::Infix(ref i, ref left, ref right) => eval_infix(env, i, left, right),
+        &Expr::If {
+            ref cond,
+            ref con,
+            ref alt,
+            ..
+        } => eval_if(env, cond, con, alt),
+        &Expr::Fn {
+            ref params,
+            ref body,
+            ..
+        } => eval_fn(env, params, body),
+        &Expr::Call { ref func, ref args } => eval_call(env, func, args),
+        &Expr::Array(ref arr, ..) => eval_array(env, arr),
+        &Expr::Hash(ref hash, ..) => eval_hash(env, hash),
+        &Expr::Index {
+            ref target,
+            ref index,
+        } => eval_index(env, target, index),
     }
 }
 
-fn eval_ident(env: &mut Env, ident: Ident) -> Result<Value> {
-    match env.get_var(&ident) {
+fn eval_ident(env: Rc<RefCell<Env>>, ident: &Ident) -> Result<Value> {
+    match env.borrow().get_var(&ident) {
         Some(val) => Ok(val),
         None => throw(format!("identifier not found: {}", ident.0), ident.pos()),
     }
 }
 
-fn eval_literal(lit: Literal) -> Result<Value> {
+fn eval_literal(lit: &Literal) -> Result<Value> {
     match lit {
-        Literal::Bool(b, ..) => ret(Value::Bool(b)),
-        Literal::Int(i, ..) => ret(Value::Int(i)),
-        Literal::String(s, ..) => ret(Value::String(s)),
+        &Literal::Bool(b, ..) => ret(Value::Bool(b)),
+        &Literal::Int(i, ..) => ret(Value::Int(i)),
+        &Literal::String(ref s, ..) => ret(Value::String(s.clone())),
     }
 }
 
@@ -92,45 +112,45 @@ macro_rules! force_eval {
     }}
 }
 
-fn eval_prefix(env: &mut Env, prefix: PrefixOp, expr: Expr) -> Result<Value> {
+fn eval_prefix(env: Rc<RefCell<Env>>, prefix: &PrefixOp, expr: &Expr) -> Result<Value> {
     match prefix {
-        PrefixOp::Not(..) => eval_prefix_not(env, expr),
-        PrefixOp::Plus(..) => eval_prefix_plus(env, expr),
-        PrefixOp::Minus(..) => eval_prefix_minus(env, expr),
+        &PrefixOp::Not(..) => eval_prefix_not(env, expr),
+        &PrefixOp::Plus(..) => eval_prefix_plus(env, expr),
+        &PrefixOp::Minus(..) => eval_prefix_minus(env, expr),
     }
 }
 
-fn eval_prefix_not(env: &mut Env, expr: Expr) -> Result<Value> {
+fn eval_prefix_not(env: Rc<RefCell<Env>>, expr: &Expr) -> Result<Value> {
     let val = force_eval!(env, expr, Bool, "a bool");
     ret(Value::Bool(!val))
 }
 
-fn eval_prefix_plus(env: &mut Env, expr: Expr) -> Result<Value> {
+fn eval_prefix_plus(env: Rc<RefCell<Env>>, expr: &Expr) -> Result<Value> {
     let val = force_eval!(env, expr, Int, "an integer");
     ret(Value::Int(val))
 }
 
-fn eval_prefix_minus(env: &mut Env, expr: Expr) -> Result<Value> {
+fn eval_prefix_minus(env: Rc<RefCell<Env>>, expr: &Expr) -> Result<Value> {
     let val = force_eval!(env, expr, Int, "an integer");
     ret(Value::Int(-val))
 }
 
-fn eval_infix(env: &mut Env, infix: InfixOp, left: Expr, right: Expr) -> Result<Value> {
+fn eval_infix(env: Rc<RefCell<Env>>, infix: &InfixOp, left: &Expr, right: &Expr) -> Result<Value> {
     match infix {
-        InfixOp::Plus(..) => eval_infix_plus(env, left, right),
-        InfixOp::Minus(..) => eval_infix_minus(env, left, right),
-        InfixOp::Divide(..) => eval_infix_divide(env, left, right),
-        InfixOp::Multiply(..) => eval_infix_multiply(env, left, right),
-        InfixOp::Eq(..) => eval_infix_eq(env, left, right),
-        InfixOp::NotEq(..) => eval_infix_not_eq(env, left, right),
-        InfixOp::GreaterThan(..) => eval_infix_greater_than(env, left, right),
-        InfixOp::LessThan(..) => eval_infix_less_than(env, left, right),
+        &InfixOp::Plus(..) => eval_infix_plus(env, left, right),
+        &InfixOp::Minus(..) => eval_infix_minus(env, left, right),
+        &InfixOp::Divide(..) => eval_infix_divide(env, left, right),
+        &InfixOp::Multiply(..) => eval_infix_multiply(env, left, right),
+        &InfixOp::Eq(..) => eval_infix_eq(env, left, right),
+        &InfixOp::NotEq(..) => eval_infix_not_eq(env, left, right),
+        &InfixOp::GreaterThan(..) => eval_infix_greater_than(env, left, right),
+        &InfixOp::LessThan(..) => eval_infix_less_than(env, left, right),
     }
 }
 
-fn eval_infix_plus(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
+fn eval_infix_plus(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
     let l_pos = left.pos();
-    let l_val = try!(eval_expr(env, left));
+    let l_val = try!(eval_expr(env.clone(), left));
     match l_val.as_ref() {
         &Value::Int(i) => {
             let r_val = force_eval!(env, right, Int, "an integer");
@@ -144,77 +164,108 @@ fn eval_infix_plus(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
     }
 }
 
-fn eval_infix_minus(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = force_eval!(env, left, Int, "an integer");
+fn eval_infix_minus(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = force_eval!(env.clone(), left, Int, "an integer");
     let r_val = force_eval!(env, right, Int, "an integer");
     ret(Value::Int(l_val - r_val))
 }
 
-fn eval_infix_divide(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = force_eval!(env, left, Int, "an integer");
+fn eval_infix_divide(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = force_eval!(env.clone(), left, Int, "an integer");
     let r_val = force_eval!(env, right, Int, "an integer");
     ret(Value::Int(l_val / r_val))
 }
 
-fn eval_infix_multiply(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = force_eval!(env, left, Int, "an integer");
+fn eval_infix_multiply(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = force_eval!(env.clone(), left, Int, "an integer");
     let r_val = force_eval!(env, right, Int, "an integer");
     ret(Value::Int(l_val * r_val))
 }
 
-fn eval_infix_eq(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = try!(eval_expr(env, left));
+fn eval_infix_eq(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = try!(eval_expr(env.clone(), left));
     let r_val = try!(eval_expr(env, right));
     ret(Value::Bool(l_val == r_val))
 }
 
-fn eval_infix_not_eq(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = try!(eval_expr(env, left));
+fn eval_infix_not_eq(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = try!(eval_expr(env.clone(), left));
     let r_val = try!(eval_expr(env, right));
     ret(Value::Bool(l_val != r_val))
 }
 
-fn eval_infix_greater_than(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = force_eval!(env, left, Int, "an integer");
+fn eval_infix_greater_than(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = force_eval!(env.clone(), left, Int, "an integer");
     let r_val = force_eval!(env, right, Int, "an integer");
     ret(Value::Bool(l_val > r_val))
 }
 
-fn eval_infix_less_than(env: &mut Env, left: Expr, right: Expr) -> Result<Value> {
-    let l_val = force_eval!(env, left, Int, "an integer");
+fn eval_infix_less_than(env: Rc<RefCell<Env>>, left: &Expr, right: &Expr) -> Result<Value> {
+    let l_val = force_eval!(env.clone(), left, Int, "an integer");
     let r_val = force_eval!(env, right, Int, "an integer");
     ret(Value::Bool(l_val < r_val))
 }
 
-fn eval_if(env: &mut Env, cond: Expr, con: BlockStmt, alt: Option<BlockStmt>) -> Result<Value> {
-    let cond_val = force_eval!(env, cond, Bool, "a bool");
+fn eval_if(env: Rc<RefCell<Env>>,
+           cond: &Expr,
+           con: &BlockStmt,
+           alt: &Option<BlockStmt>)
+           -> Result<Value> {
+    let cond_val = force_eval!(env.clone(), cond, Bool, "a bool");
 
     if cond_val {
         eval_block_stmt(env, con)
-    } else if let Some(some_alt) = alt {
+    } else if let &Some(ref some_alt) = alt {
         eval_block_stmt(env, some_alt)
     } else {
         ret(Value::Null)
     }
 }
 
-fn eval_fn(params: Vec<Ident>, body: BlockStmt) -> Result<Value> {
+fn eval_fn(env: Rc<RefCell<Env>>, params: &Vec<Ident>, body: &BlockStmt) -> Result<Value> {
+    ret(Value::Fn {
+            params: params.clone(),
+            body: body.clone(),
+            env,
+        })
+}
+
+fn eval_call(env: Rc<RefCell<Env>>, func: &Expr, args: &Vec<Expr>) -> Result<Value> {
+    let pos = func.pos();
+    let f = try!(eval_expr(env.clone(), func));
+    match *f.clone() {
+        Value::Fn {
+            ref params,
+            ref body,
+            env: ref fn_env,
+        } => {
+            if args.len() != params.len() {
+                throw(format!("wrong number of arguments: {} expected, {} provided",
+                              params.len(),
+                              args.len()),
+                      pos)
+            } else {
+                let mut vars = vec![];
+                for (idx, ident) in params.iter().enumerate() {
+                    vars.push((ident.clone(), try!(eval_expr(env.clone(), &args[idx]))));
+                }
+                let call_env = Rc::new(RefCell::new(Env::wrap(vars, fn_env.clone())));
+                Ok(unwrap_return!(try!(eval_block_stmt(call_env, body))))
+            }
+        }
+        ref v => throw(format!("{} is not a function", v), pos),
+    }
+}
+
+fn eval_array(env: Rc<RefCell<Env>>, arr: &Vec<Expr>) -> Result<Value> {
     unimplemented!()
 }
 
-fn eval_call(env: &mut Env, func: Expr, args: Vec<Expr>) -> Result<Value> {
+fn eval_hash(env: Rc<RefCell<Env>>, hash: &Vec<(Literal, Expr)>) -> Result<Value> {
     unimplemented!()
 }
 
-fn eval_array(env: &mut Env, arr: Vec<Expr>) -> Result<Value> {
-    unimplemented!()
-}
-
-fn eval_hash(env: &mut Env, hash: Vec<(Literal, Expr)>) -> Result<Value> {
-    unimplemented!()
-}
-
-fn eval_index(env: &mut Env, target: Expr, index: Expr) -> Result<Value> {
+fn eval_index(env: Rc<RefCell<Env>>, target: &Expr, index: &Expr) -> Result<Value> {
     unimplemented!()
 }
 
@@ -227,14 +278,14 @@ mod tests {
     fn eval_to(code: &str, expected: Value) {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
-        let actual = eval(program).unwrap();
+        let actual = eval(&program).unwrap();
         assert_eq!(actual, Rc::new(expected));
     }
 
     fn fail_with(code: &str, error: &str, pos: (i32, i32)) {
         let tokens = lexer::tokenize(String::from(code).chars()).unwrap();
         let program = parser::parse(tokens).unwrap();
-        let actual = eval(program);
+        let actual = eval(&program);
         assert_eq!(actual, Err(EvalError(String::from(error), pos)));
     }
 
@@ -408,7 +459,7 @@ addTwo(2);
         fail_with("5();", "5 is not a function", (1, 1));
         fail_with("false();", "false is not a function", (1, 1));
         fail_with("let add = fn(x, y) { x + y; }; add(1);",
-                  "wrong number of arguments: 2 expected but 1 given",
+                  "wrong number of arguments: 2 expected, 1 provided",
                   (1, 32));
         eval_to(FN1, Value::Int(10));
         eval_to(FN2, Value::Int(6));

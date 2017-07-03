@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::rc::Rc;
@@ -21,7 +22,7 @@ pub fn throw<T>(message: String, pos: (i32, i32)) -> Result<T> {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Env {
     var_map: HashMap<Ident, Rc<Value>>,
-    parent: Option<Box<Env>>,
+    parent: Option<Rc<RefCell<Env>>>,
 }
 
 impl Env {
@@ -32,10 +33,10 @@ impl Env {
         }
     }
 
-    pub fn wrap(items: Vec<(Ident, Rc<Value>)>, parent: Env) -> Env {
+    pub fn wrap(items: Vec<(Ident, Rc<Value>)>, parent: Rc<RefCell<Env>>) -> Env {
         Env {
             var_map: HashMap::from_iter(items),
-            parent: Some(Box::new(parent)),
+            parent: Some(parent.clone()),
         }
     }
 
@@ -48,7 +49,7 @@ impl Env {
             Some(x) => Some(x.clone()),
             None => {
                 match self.parent {
-                    Some(ref p) => p.get_var(id),
+                    Some(ref p) => p.borrow().get_var(id),
                     None => None,
                 }
             }
