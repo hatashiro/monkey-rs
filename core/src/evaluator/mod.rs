@@ -184,6 +184,7 @@ let addTwo = newAdder(2);
 addTwo(2);
 ";
 
+    #[test]
     fn fn_decl_and_eval() {
         eval_to("let identity = fn(x) { x; }; identity(5);", Value::Int(5));
         eval_to("let identity = fn(x) { return x; }; identity(5);",
