@@ -229,14 +229,14 @@ fn parse_paren_expr(p: &mut Parser) -> Result<Expr> {
 }
 
 fn parse_array_expr(p: &mut Parser) -> Result<Expr> {
-    drop!(p.predicate(is!(LBracket)));
+    let l = try!(p.predicate(is!(LBracket)));
     let exprs = try!(parse_comma_separated(p, &parse_expr));
     drop!(p.predicate(is!(RBracket)));
-    Ok(Expr::Array(exprs))
+    Ok(Expr::Array(exprs, l.pos()))
 }
 
 fn parse_hash_expr(p: &mut Parser) -> Result<Expr> {
-    drop!(p.predicate(is!(LBrace)));
+    let l = try!(p.predicate(is!(LBrace)));
     let pairs = try!(parse_comma_separated(p, &|p| {
         let lit = try!(parse_literal(p));
         drop!(p.predicate(is!(Colon)));
@@ -244,11 +244,11 @@ fn parse_hash_expr(p: &mut Parser) -> Result<Expr> {
         Ok((lit, expr))
     }));
     drop!(p.predicate(is!(RBrace)));
-    Ok(Expr::Hash(pairs))
+    Ok(Expr::Hash(pairs, l.pos()))
 }
 
 fn parse_if_expr(p: &mut Parser) -> Result<Expr> {
-    drop!(p.predicate(is!(If)));
+    let i = try!(p.predicate(is!(If)));
     drop!(p.predicate(is!(LParen)));
     let cond = try!(parse_expr(p));
     drop!(p.predicate(is!(RParen)));
@@ -261,16 +261,17 @@ fn parse_if_expr(p: &mut Parser) -> Result<Expr> {
         cond: Box::new(cond),
         con,
         alt,
+        pos: i.pos(),
     })
 }
 
 fn parse_fn_expr(p: &mut Parser) -> Result<Expr> {
-    drop!(p.predicate(is!(Function)));
+    let f = try!(p.predicate(is!(Function)));
     drop!(p.predicate(is!(LParen)));
     let params = try!(parse_comma_separated(p, &parse_ident));
     drop!(p.predicate(is!(RParen)));
     let body = try!(parse_block_stmt(p));
-    Ok(Expr::Fn { params, body })
+    Ok(Expr::Fn { params, body, pos: f.pos() })
 }
 
 #[cfg(test)]
@@ -380,6 +381,7 @@ fn() {
                                                Box::new(Expr::Ident(Ident(s("barfoo"), token!(Ident, 3, 19, "barfoo"))))
                                            ))
                                        ],
+                                       pos: (2, 1),
                    })]);
     }
 
@@ -401,7 +403,8 @@ fn(x, y) {
                                Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 3, 10, "x")))),
                                Box::new(Expr::Ident(Ident(s("y"), token!(Ident, 3, 14, "y"))))
                            ))
-                        ]
+                       ],
+                       pos: (2, 1),
                    })]);
     }
 
@@ -428,9 +431,11 @@ fn() {
                                        Box::new(Expr::Ident(Ident(s("x"), token!(Ident, 3, 36, "x")))),
                                        Box::new(Expr::Ident(Ident(s("y"), token!(Ident, 3, 40, "y"))))
                                    ))
-                               ]
+                               ],
+                               pos: (3, 10),
                            })
-                       ]
+                       ],
+                       pos: (2, 1),
                    })]);
     }
 
@@ -477,7 +482,9 @@ fn(a, b) { return a + b; }(1, 2);
                                                                                  Box::new(Expr::Ident(Ident(s("a"), token!(Ident, 4, 19, "a")))),
                                                                                  Box::new(Expr::Ident(Ident(s("b"), token!(Ident, 4, 23, "b"))))
                                                                              ))
-                                                                         ]}),
+                                                                         ],
+                                                                         pos: (4, 1),
+                                                                        }),
                                                args: vec![
                                                    Expr::Lit(Literal::Int(1, token!(IntLiteral, 4, 28, "1"))),
                                                    Expr::Lit(Literal::Int(2, token!(IntLiteral, 4, 31, "2")))
@@ -592,7 +599,8 @@ fn(a, b) { return a + b; }(1, 2);
                                con: vec![Stmt::Expr(
                                    Expr::Ident(Ident(s("x"), token!(Ident, 1, 14, "x")))
                                )],
-                               alt: None
+                               alt: None,
+                               pos: (1, 1),
                            }
                        )
                    ]);
@@ -614,7 +622,8 @@ fn(a, b) { return a + b; }(1, 2);
                                    vec![Stmt::Expr(
                                        Expr::Ident(Ident(s("y"), token!(Ident, 1, 25, "y")))
                                    )]
-                               )
+                               ),
+                               pos: (1, 1),
                            }
                        )
                    ]);
@@ -644,7 +653,7 @@ fn(a, b) { return a + b; }(1, 2);
                            Box::new(Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 12, "3")))),
                            Box::new(Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 16, "3"))))
                        ),
-                   ]))]);
+                   ], (1, 1)))]);
         program_eq("myArray[1 + 1]",
                    vec![Stmt::Expr(
                        Expr::Index {
@@ -658,13 +667,15 @@ fn(a, b) { return a + b; }(1, 2);
                            )
                        }
                    )]);
-        code_result_eq("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][b * c])) * d)");
-        code_result_eq("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))");
+        code_result_eq("  a *  [1, 2, 3, 4][b * c]   * d",
+                       "((a * ([1, 2, 3, 4][b * c])) * d)");
+        code_result_eq("add( a *  b[2],    b[1],   2 *  [1, 2][1])",
+                       "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))");
     }
 
     #[test]
     fn hash() {
-        program_eq("{}", vec![Stmt::Expr(Expr::Hash(vec![]))]);
+        program_eq("{}", vec![Stmt::Expr(Expr::Hash(vec![], (1, 1)))]);
         program_eq("{\"one\": 1, \"two\": 2, \"three\": 3}",
                    vec![Stmt::Expr(Expr::Hash(vec![
                        (Literal::String(s("one"), token!(StringLiteral, 1, 2, "\"one\"")),
@@ -676,7 +687,7 @@ fn(a, b) { return a + b; }(1, 2);
                        (Literal::String(s("three"), token!(StringLiteral, 1, 22, "\"three\"")),
                         Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 31, "3")))
                        )
-                   ]))]);
+                   ], (1, 1)))]);
         program_eq("{4: 1, 5: 2, 6: 3}",
                    vec![Stmt::Expr(Expr::Hash(vec![
                        (Literal::Int(4, token!(IntLiteral, 1, 2, "4")),
@@ -688,7 +699,7 @@ fn(a, b) { return a + b; }(1, 2);
                        (Literal::Int(6, token!(IntLiteral, 1, 14, "6")),
                         Expr::Lit(Literal::Int(3, token!(IntLiteral, 1, 17, "3")))
                        )
-                   ]))]);
+                   ], (1, 1)))]);
         program_eq("{true: 1, false: 2}",
                    vec![Stmt::Expr(Expr::Hash(vec![
                        (Literal::Bool(true, token!(BoolLiteral, 1, 2, "true")),
@@ -697,7 +708,7 @@ fn(a, b) { return a + b; }(1, 2);
                        (Literal::Bool(false, token!(BoolLiteral, 1, 11, "false")),
                         Expr::Lit(Literal::Int(2, token!(IntLiteral, 1, 18, "2")))
                        )
-                   ]))]);
+                   ], (1, 1)))]);
         program_eq("{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15/5}",
                    vec![Stmt::Expr(Expr::Hash(vec![
                        (Literal::String(s("one"), token!(StringLiteral, 1, 2, "\"one\"")),
@@ -718,6 +729,6 @@ fn(a, b) { return a + b; }(1, 2);
                             Box::new(Expr::Lit(Literal::Int(15, token!(IntLiteral, 1, 40, "15")))),
                             Box::new(Expr::Lit(Literal::Int(5, token!(IntLiteral, 1, 44, "5"))))
                         ))
-                   ]))]);
+                   ], (1, 1)))]);
     }
 }

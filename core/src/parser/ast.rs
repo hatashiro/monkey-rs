@@ -1,6 +1,10 @@
 use lexer::types::*;
 use std::hash::{Hash, Hasher};
 
+pub trait Positioned {
+    fn pos(&self) -> (i32, i32);
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program(pub BlockStmt);
 
@@ -23,12 +27,34 @@ pub enum Expr {
         cond: Box<Expr>,
         con: BlockStmt,
         alt: Option<BlockStmt>,
+        pos: (i32, i32),
     },
-    Fn { params: Vec<Ident>, body: BlockStmt },
+    Fn {
+        params: Vec<Ident>,
+        body: BlockStmt,
+        pos: (i32, i32),
+    },
     Call { func: Box<Expr>, args: Vec<Expr> },
-    Array(Vec<Expr>),
-    Hash(Vec<(Literal, Expr)>),
+    Array(Vec<Expr>, (i32, i32)),
+    Hash(Vec<(Literal, Expr)>, (i32, i32)),
     Index { target: Box<Expr>, index: Box<Expr> },
+}
+
+impl Positioned for Expr {
+    fn pos(&self) -> (i32, i32) {
+        match self {
+            &Expr::Ident(ref i) => i.pos(),
+            &Expr::Lit(ref l) => l.pos(),
+            &Expr::Prefix(ref p, _) => p.pos(),
+            &Expr::Infix(ref i, ..) => i.pos(),
+            &Expr::If { pos, .. } => pos,
+            &Expr::Fn { pos, .. } => pos,
+            &Expr::Call { ref func, .. } => func.pos(),
+            &Expr::Array(_, pos) => pos,
+            &Expr::Hash(_, pos) => pos,
+            &Expr::Index { ref target, .. } => target.pos(),
+        }
+    }
 }
 
 #[derive(Eq, Debug)]
@@ -43,6 +69,12 @@ impl PartialEq for Ident {
 impl Hash for Ident {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
+    }
+}
+
+impl Positioned for Ident {
+    fn pos(&self) -> (i32, i32) {
+        self.1.pos()
     }
 }
 
@@ -64,6 +96,16 @@ impl PartialEq for Literal {
     }
 }
 
+impl Positioned for Literal {
+    fn pos(&self) -> (i32, i32) {
+        match self {
+            &Literal::Int(_, ref t) => t.pos(),
+            &Literal::Bool(_, ref t) => t.pos(),
+            &Literal::String(_, ref t) => t.pos(),
+        }
+    }
+}
+
 #[derive(Eq, Debug)]
 pub enum PrefixOp {
     Plus(Token),
@@ -78,6 +120,16 @@ impl PartialEq for PrefixOp {
             (&PrefixOp::Minus(_), &PrefixOp::Minus(_)) => true,
             (&PrefixOp::Not(_), &PrefixOp::Not(_)) => true,
             _ => false,
+        }
+    }
+}
+
+impl Positioned for PrefixOp {
+    fn pos(&self) -> (i32, i32) {
+        match self {
+            &PrefixOp::Plus(ref t) => t.pos(),
+            &PrefixOp::Minus(ref t) => t.pos(),
+            &PrefixOp::Not(ref t) => t.pos(),
         }
     }
 }
@@ -106,6 +158,21 @@ impl PartialEq for InfixOp {
             (&InfixOp::GreaterThan(_), &InfixOp::GreaterThan(_)) => true,
             (&InfixOp::LessThan(_), &InfixOp::LessThan(_)) => true,
             _ => false,
+        }
+    }
+}
+
+impl Positioned for InfixOp {
+    fn pos(&self) -> (i32, i32) {
+        match self {
+            &InfixOp::Plus(ref t) => t.pos(),
+            &InfixOp::Minus(ref t) => t.pos(),
+            &InfixOp::Divide(ref t) => t.pos(),
+            &InfixOp::Multiply(ref t) => t.pos(),
+            &InfixOp::Eq(ref t) => t.pos(),
+            &InfixOp::NotEq(ref t) => t.pos(),
+            &InfixOp::GreaterThan(ref t) => t.pos(),
+            &InfixOp::LessThan(ref t) => t.pos(),
         }
     }
 }
