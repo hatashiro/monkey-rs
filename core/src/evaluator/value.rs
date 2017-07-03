@@ -11,8 +11,8 @@ pub enum Value {
     Int(i64),
     Bool(bool),
     String(String),
-    Array(Vec<Value>),
-    Hash(HashMap<Hashable, Value>),
+    Array(Vec<Rc<Value>>),
+    Hash(HashMap<Hashable, Rc<Value>>),
     Fn {
         params: Vec<Ident>,
         body: BlockStmt,
@@ -20,7 +20,7 @@ pub enum Value {
     },
     BuiltInFn {
         name: String,
-        num_params: i32,
+        num_params: usize,
         func: BuiltInFn,
     },
     Return(Rc<Value>),
@@ -102,14 +102,14 @@ impl fmt::Display for Hashable {
     }
 }
 
-pub type BuiltInFn = fn(Vec<Value>) -> Result<Value>;
+pub type BuiltInFn = fn(Vec<((i32, i32), Rc<Value>)>) -> Result<Value>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::iter::FromIterator;
 
-    fn dummy(_: Vec<Value>) -> Result<Value> {
+    fn dummy(_: Vec<((i32, i32), Rc<Value>)>) -> Result<Value> {
         unreachable!()
     }
 
@@ -121,16 +121,16 @@ mod tests {
                    "\"hello\\nworld\"");
         assert_eq!(format!("{}", Value::Array(vec![])), "[]");
         assert_eq!(format!("{}",
-                           Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)])),
+                           Value::Array(vec![Rc::new(Value::Int(1)), Rc::new(Value::Int(2)), Rc::new(Value::Int(3))])),
                    "[1, 2, 3]");
         assert_eq!(format!("{}", Value::Hash(HashMap::new())), "{}");
         assert_eq!(format!("{}",
                            Value::Hash(HashMap::from_iter(vec![(Hashable::Int(1),
-                                                                Value::String(String::from("one"))),
+                                                                Rc::new(Value::String(String::from("one")))),
                                                                (Hashable::Int(2),
-                                                                Value::String(String::from("two"))),
+                                                                Rc::new(Value::String(String::from("two")))),
                                                                (Hashable::Int(3),
-                                                                Value::String(String::from("three")))]
+                                                                Rc::new(Value::String(String::from("three"))))]
                            ))),
                    "{1: \"one\", 2: \"two\", 3: \"three\"}");
         assert_eq!(format!("{}",

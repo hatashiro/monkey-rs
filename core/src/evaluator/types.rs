@@ -33,6 +33,13 @@ impl Env {
         }
     }
 
+    pub fn from<T: IntoIterator<Item = (Ident, Rc<Value>)>>(iter: T) -> Env {
+        Env {
+            var_map: HashMap::from_iter(iter),
+            parent: None,
+        }
+    }
+
     pub fn wrap(items: Vec<(Ident, Rc<Value>)>, parent: Rc<RefCell<Env>>) -> Env {
         Env {
             var_map: HashMap::from_iter(items),

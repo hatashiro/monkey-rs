@@ -1,3 +1,4 @@
+pub mod built_ins;
 pub mod value;
 pub mod types;
 
@@ -8,7 +9,7 @@ use self::types::*;
 use parser::ast::*;
 
 pub fn eval(program: &Program) -> Result<Value> {
-    let env = Rc::new(RefCell::new(Env::new()));
+    let env = Rc::new(RefCell::new(built_ins::init()));
     eval_program(env, program)
 }
 
@@ -253,6 +254,25 @@ fn eval_call(env: Rc<RefCell<Env>>, func: &Expr, args: &Vec<Expr>) -> Result<Val
                 Ok(unwrap_return!(try!(eval_block_stmt(call_env, body))))
             }
         }
+        Value::BuiltInFn {
+            ref name,
+            num_params,
+            func,
+        } => {
+            if args.len() != num_params {
+                throw(format!("wrong number of arguments: {} expected, {} provided",
+                              num_params,
+                              args.len()),
+                      pos)
+            } else {
+                let mut vars = vec![];
+                for expr in args {
+                    let pos = expr.pos();
+                    vars.push((pos, try!(eval_expr(env.clone(), expr))));
+                }
+                func(vars)
+            }
+        }
         ref v => throw(format!("{} is not a function", v), pos),
     }
 }
@@ -489,9 +509,15 @@ addTwo(2);
     #[test]
     fn array() {
         eval_to("[1, 2, 3, 4]",
-                Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3), Value::Int(4)]));
+                Value::Array(vec![Rc::new(Value::Int(1)),
+                                  Rc::new(Value::Int(2)),
+                                  Rc::new(Value::Int(3)),
+                                  Rc::new(Value::Int(4))]));
         eval_to("let double = fn(x) { x * 2 }; [1, double(2), 3 * 3, 4 - 3]",
-                Value::Array(vec![Value::Int(1), Value::Int(4), Value::Int(9), Value::Int(1)]));
+                Value::Array(vec![Rc::new(Value::Int(1)),
+                                  Rc::new(Value::Int(4)),
+                                  Rc::new(Value::Int(9)),
+                                  Rc::new(Value::Int(1))]));
         eval_to("[1, 2, 3][0]", Value::Int(1));
         eval_to("[1, 2, 3][1]", Value::Int(2));
         eval_to("[1, 2, 3][2]", Value::Int(3));
@@ -512,31 +538,30 @@ addTwo(2);
         eval_to("len(\"hello world!\")", Value::Int(12));
         eval_to("len(\"\")", Value::Int(0));
         eval_to("len(\"Hey Bob, how ya doin?\")", Value::Int(21));
-        fail_with("len(3)",
-                  "invalid arguments for [built-in function: len]: [3]",
-                  (1, 1));
+        fail_with("len(3)", "3 is not a string or an array", (1, 5));
         fail_with("len(\"hello\", \"world\")",
-                  "wrong number of arguments: 1 expected but 2 given",
+                  "wrong number of arguments: 1 expected, 2 provided",
                   (1, 1));
         eval_to("len([])", Value::Int(0));
         eval_to("len([1, 2, 3, 4])", Value::Int(4));
         // head
         eval_to("head([1])", Value::Int(1));
         eval_to("head([1, 2, 3, 4])", Value::Int(1));
-        fail_with("head([])",
-                  "invalid arguments for [built-in function: head]: empty array",
-                  (1, 1));
+        fail_with("head([])", "invalid arguments: empty array", (1, 6));
         // tail
         eval_to("tail([1])", Value::Array(vec![]));
         eval_to("tail([1, 2, 3, 4])",
-                Value::Array(vec![Value::Int(2), Value::Int(3), Value::Int(4)]));
-        fail_with("tail([])",
-                  "invalid arguments for [built-in function: tail]: empty array",
-                  (1, 1));
+                Value::Array(vec![Rc::new(Value::Int(2)),
+                                  Rc::new(Value::Int(3)),
+                                  Rc::new(Value::Int(4))]));
+        fail_with("tail([])", "invalid arguments: empty array", (1, 6));
         // cons
-        eval_to("cons(1, [])", Value::Array(vec![Value::Int(1)]));
+        eval_to("cons(1, [])", Value::Array(vec![Rc::new(Value::Int(1))]));
         eval_to("cons(1, [2, 3, 4])",
-                Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3), Value::Int(4)]));
+                Value::Array(vec![Rc::new(Value::Int(1)),
+                                  Rc::new(Value::Int(2)),
+                                  Rc::new(Value::Int(3)),
+                                  Rc::new(Value::Int(4))]));
     }
 
     static MAP_DECL: &str = "
@@ -565,7 +590,10 @@ let reduce = fn(f, init, arr) {
     fn map_reduce() {
         eval_to(&(MAP_DECL.to_string() +
                   "let double = fn(x) { x * 2 }; map(double, [1, 2, 3, 4])"),
-                Value::Array(vec![Value::Int(2), Value::Int(4), Value::Int(6), Value::Int(8)]));
+                Value::Array(vec![Rc::new(Value::Int(2)),
+                                  Rc::new(Value::Int(4)),
+                                  Rc::new(Value::Int(6)),
+                                  Rc::new(Value::Int(8))]));
         eval_to(&(REDUCE_DECL.to_string() +
                   "let add = fn(x, y) { x + y }; reduce(add, 0, [1, 2, 3, 4, 5])"),
                 Value::Int(15));
