@@ -18,7 +18,7 @@ pub enum Value {
     BuiltInFn {
         name: String,
         num_params: i32,
-        func: &'static BuiltInFn,
+        func: BuiltInFn,
     },
     Return(Box<Value>),
     Null,
