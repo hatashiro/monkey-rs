@@ -12,7 +12,12 @@ pub fn eval(program: Program) -> Result<Value> {
 }
 
 fn eval_program(env: &mut Env, program: Program) -> Result<Value> {
-    eval_block_stmt(env, program.0)
+    let res = try!(eval_block_stmt(env, program.0));
+    match res.as_ref() {
+        &Value::Return(ref v) => return Ok(v.clone()),
+        _ => {}
+    }
+    Ok(res)
 }
 
 fn eval_block_stmt(env: &mut Env, block: BlockStmt) -> Result<Value> {
@@ -21,7 +26,7 @@ fn eval_block_stmt(env: &mut Env, block: BlockStmt) -> Result<Value> {
     for stmt in block {
         res = try!(eval_stmt(env, stmt));
         match res.as_ref() {
-            &Value::Return(ref v) => return Ok(v.clone()),
+            &Value::Return(..) => break,
             res => continue,
         }
     }
