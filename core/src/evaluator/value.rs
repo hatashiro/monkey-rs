@@ -92,6 +92,16 @@ pub enum Hashable {
     String(String),
 }
 
+impl Hashable {
+    pub fn from_lit(lit: &Literal) -> Self {
+        match lit {
+            &Literal::Int(i, _) => Hashable::Int(i),
+            &Literal::Bool(b, _) => Hashable::Bool(b),
+            &Literal::String(ref s, _) => Hashable::String(s.clone()),
+        }
+    }
+}
+
 impl fmt::Display for Hashable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", match self {

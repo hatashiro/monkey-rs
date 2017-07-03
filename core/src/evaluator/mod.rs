@@ -3,7 +3,10 @@ pub mod value;
 pub mod types;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::iter::FromIterator;
 use std::rc::Rc;
+use std::result;
 use self::value::*;
 use self::types::*;
 use parser::ast::*;
@@ -278,15 +281,50 @@ fn eval_call(env: Rc<RefCell<Env>>, func: &Expr, args: &Vec<Expr>) -> Result<Val
 }
 
 fn eval_array(env: Rc<RefCell<Env>>, arr: &Vec<Expr>) -> Result<Value> {
-    unimplemented!()
+    let mut res = vec![];
+    for expr in arr {
+        res.push(try!(eval_expr(env.clone(), expr)));
+    }
+    ret(Value::Array(res))
 }
 
 fn eval_hash(env: Rc<RefCell<Env>>, hash: &Vec<(Literal, Expr)>) -> Result<Value> {
-    unimplemented!()
+    let mut res = vec![];
+    for &(ref lit, ref expr) in hash {
+        res.push((Hashable::from_lit(lit), try!(eval_expr(env.clone(), expr))));
+    }
+    ret(Value::Hash(HashMap::from_iter(res)))
+}
+
+fn eval_hashable(env: Rc<RefCell<Env>>, expr: &Expr) -> result::Result<Hashable, EvalError> {
+    let val = try!(eval_expr(env, expr));
+    match val.as_ref() {
+        &Value::Int(i) => Ok(Hashable::Int(i)),
+        &Value::Bool(b) => Ok(Hashable::Bool(b)),
+        &Value::String(ref s) => Ok(Hashable::String(s.clone())),
+        ref v => Err(EvalError(format!("{} is not hashable", v), expr.pos())),
+    }
 }
 
 fn eval_index(env: Rc<RefCell<Env>>, target: &Expr, index: &Expr) -> Result<Value> {
-    unimplemented!()
+    let t = try!(eval_expr(env.clone(), target));
+    match t.as_ref() {
+        &Value::Array(ref arr) => {
+            let idx = force_eval!(env, index, Int, "an integer");
+            match arr.get(idx as usize) {
+                Some(v) => Ok(v.clone()),
+                None => ret(Value::Null),
+            }
+        }
+        &Value::Hash(ref hash) => {
+            let h = try!(eval_hashable(env, index));
+            match hash.get(&h) {
+                Some(v) => Ok(v.clone()),
+                None => ret(Value::Null),
+            }
+        }
+        ref v => throw(format!("unexpected index target: {}", v), target.pos()),
+    }
 }
 
 #[cfg(test)]
@@ -624,7 +662,9 @@ let h = {
         eval_to(&(HASH1.to_string() + "h[true]"), Value::Bool(true));
         eval_to(&(HASH1.to_string() + "h[5 < 1]"), Value::Bool(false));
         eval_to(&(HASH1.to_string() + "h[100]"), Value::Null);
-        fail_with(&(HASH1.to_string() + "h[[]]"), "[] is not hashable", (1, 1));
+        fail_with(&(HASH1.to_string() + "h[[]]"),
+                  "[] is not hashable",
+                  (14, 3));
         fail_with("3[true];", "unexpected index target: 3", (1, 1));
     }
 }
