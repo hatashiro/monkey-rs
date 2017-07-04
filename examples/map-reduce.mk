@@ -7,7 +7,6 @@ let map = fn(f, arr) {
   }
 };
 
-
 let reduce = fn(f, init, arr) {
   if (len(arr) == 0) {
     init
@@ -26,6 +25,7 @@ let add = fn(x, y) {
 };
 
 let mapped = map(double, [1, 2, 3, 4]);
+
 print(mapped);
 
 let sum = fn(arr) {
@@ -33,4 +33,5 @@ let sum = fn(arr) {
 };
 
 let summed = sum([1, 2, 3, 4, 5]);
+
 print(summed);
