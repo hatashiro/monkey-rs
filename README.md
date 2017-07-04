@@ -25,6 +25,17 @@ Haskell).
 
 Let me see if I can do it well :v:
 
+## Screenshot
+
+#### Compiler error messages
+
+<img width="300" src="https://user-images.githubusercontent.com/1013641/27816551-27038012-60c7-11e7-8373-4263e003dc0e.png">
+<img width="300" src="https://user-images.githubusercontent.com/1013641/27816518-0073f896-60c7-11e7-892f-d4f5f66cbb67.png">
+
+#### REPL
+
+<img width="500" src="https://user-images.githubusercontent.com/1013641/27816655-cea04954-60c7-11e7-9c7d-8b483996e64a.png">
+
 ## Instruction
 
 Build, test and install:
@@ -44,4 +55,4 @@ monkey run examples/map-reduce.mk
 
 ## License
 
-[BSD3](LICENSE)
+[MIT](LICENSE)
