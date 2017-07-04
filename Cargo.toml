@@ -7,5 +7,6 @@ authors = ["Hyunje Jun <me@noraesae.net>"]
 
 [dependencies]
 core = { path = "core" }
+ansi_term = "0.9"
 getopts = "0.2"
 rustyline = "1.0"
