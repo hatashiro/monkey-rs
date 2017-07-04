@@ -110,7 +110,7 @@ fn lex_reserved_or_ident(l: &mut Lexer) -> Result<Token> {
 
 fn lex_integer(l: &mut Lexer) -> Result<Token> {
     let pos = l.current_pos();
-    let lit: String = try!(l.many(|l| l.predicate(is_digit)));
+    let lit: String = try!(l.many1(|l| l.predicate(is_digit)));
     Ok(token!(IntLiteral, pos.0, pos.1, lit))
 }
 
