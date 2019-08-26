@@ -1,6 +1,6 @@
 [package]
 name = "core"
 version = "0.1.0"
-authors = ["Hyunje Jun <me@noraesae.net>"]
+authors = ["Hyunjae Jun <noraesae+dev@gmail.com>"]
 
 [dependencies]
